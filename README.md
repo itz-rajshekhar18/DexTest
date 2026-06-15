@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI IQ Test Platform 🧠✨
 
-## Getting Started
+Advanced AI-powered IQ testing platform with voice, text, and game-based assessments featuring stunning 3D animations.
 
-First, run the development server:
+## 🚀 Quick Start
 
+### 1. Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env.local` and add your API keys:
+```bash
+cp .env.example .env.local
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Then edit `.env.local` with your actual keys.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Deploy Firebase Rules
+```bash
+firebase deploy --only firestore:rules
+```
 
-## Learn More
+### 4. Run Development Server
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Visit `http://localhost:3000`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔐 Security
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Never commit API keys!** See [SECURITY_NOTE.md](./SECURITY_NOTE.md)
 
-## Deploy on Vercel
+## 📚 Documentation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- [Quick Start](./QUICK_START.md)
+- [Setup Guide](./SETUP_GUIDE.md)
+- [Architecture](./PROJECT_ARCHITECTURE.md)
+- [3D Effects](./3D_EFFECTS_GUIDE.md)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠️ Tech Stack
+
+- Next.js 16.2.9 + React 19
+- Three.js + React Three Fiber
+- OpenRouter AI (NVIDIA Llama)
+- Firebase Firestore
+- Framer Motion + GSAP
+- Tailwind CSS
+
+---
+
+**Built for education 🎓**
