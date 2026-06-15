@@ -499,23 +499,30 @@ function Scene({ tier }: { tier: PerformanceTier }) {
       {tier !== "low" && <AmbientOrbs />}
 
       {/* Post-processing */}
-      {tier !== "low" && (
+      {tier === "high" ? (
         <EffectComposer>
           <Bloom
             luminanceThreshold={0.2}
             luminanceSmoothing={0.9}
-            intensity={tier === "high" ? 1.2 : 0.6}
+            intensity={1.2}
           />
           <Vignette eskil={false} offset={0.1} darkness={0.8} />
-          {tier === "high" && (
-            <ChromaticAberration
-              offset={new THREE.Vector2(0.0005, 0.0005)}
-              radialModulation={true}
-              modulationOffset={0.5}
-            />
-          )}
+          <ChromaticAberration
+            offset={new THREE.Vector2(0.0005, 0.0005)}
+            radialModulation={true}
+            modulationOffset={0.5}
+          />
         </EffectComposer>
-      )}
+      ) : tier === "medium" ? (
+        <EffectComposer>
+          <Bloom
+            luminanceThreshold={0.2}
+            luminanceSmoothing={0.9}
+            intensity={0.6}
+          />
+          <Vignette eskil={false} offset={0.1} darkness={0.8} />
+        </EffectComposer>
+      ) : null}
     </>
   );
 }
