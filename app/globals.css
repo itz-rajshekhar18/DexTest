@@ -1,0 +1,475 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════
+   Design System — Futuristic AI Laboratory
+   ═══════════════════════════════════════════════════ */
+
+:root {
+  --background: #030712;
+  --foreground: #e2e8f0;
+
+  /* Lighting palette */
+  --glow-indigo: rgba(99, 102, 241, 0.5);
+  --glow-purple: rgba(124, 58, 237, 0.4);
+  --glow-cyan: rgba(34, 211, 238, 0.4);
+  --glow-blue: rgba(59, 130, 246, 0.4);
+
+  /* Glass surfaces */
+  --glass-bg: rgba(15, 15, 25, 0.45);
+  --glass-border: rgba(99, 102, 241, 0.12);
+  --glass-blur: 24px;
+
+  /* Animation timing */
+  --spring-bounce: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --spring-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ─────────────── Base ─────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ─────────────── Loading Screen ─────────────── */
+@keyframes shimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* ─────────────── Holographic Effects ─────────────── */
+@keyframes lightSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes cardSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(50%);
+  }
+}
+
+@keyframes ambientFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  33% {
+    transform: translate(30px, -20px) scale(1.05);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translate(-20px, 15px) scale(0.95);
+    opacity: 0.9;
+  }
+}
+
+@keyframes ambientPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+/* ─────────────── Neural Background Fallback ─────────────── */
+.neural-bg-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(79, 70, 229, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(124, 58, 237, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(34, 211, 238, 0.04) 0%, transparent 50%),
+    #030712;
+  pointer-events: none;
+}
+
+/* ─────────────── Glass Morphism ─────────────── */
+.glass-surface {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.3);
+  border: 1px solid var(--glass-border);
+}
+
+/* ─────────────── Premium Button ─────────────── */
+.btn-premium {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.btn-premium::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s var(--spring-smooth);
+}
+
+.btn-premium:hover::before {
+  transform: translateX(100%);
+}
+
+.btn-premium::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--glow-indigo), var(--glow-purple), var(--glow-cyan));
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  filter: blur(8px);
+}
+
+.btn-premium:hover::after {
+  opacity: 0.6;
+}
+
+/* ─────────────── Premium Input Focus ─────────────── */
+.input-premium {
+  transition: all 0.3s var(--spring-smooth);
+}
+
+.input-premium:focus {
+  box-shadow:
+    0 0 0 2px rgba(99, 102, 241, 0.2),
+    0 0 20px -4px rgba(99, 102, 241, 0.15),
+    inset 0 0 12px -4px rgba(99, 102, 241, 0.05);
+}
+
+/* ─────────────── Fade In Animation Class ─────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeInUp 0.6s var(--spring-bounce) forwards;
+}
+
+/* ─────────────── Glow Borders ─────────────── */
+@keyframes borderGlow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ─────────────── Selection ─────────────── */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: #e0e7ff;
+}
+
+/* ─────────────── Scrollbar ─────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.4);
+}
+
+/* Premium AI atmosphere */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at var(--cursor-x, 50%) var(--cursor-y, 35%), rgba(34, 211, 238, 0.075), transparent 24rem),
+    radial-gradient(circle at 18% 18%, rgba(79, 70, 229, 0.16), transparent 28rem),
+    radial-gradient(circle at 82% 76%, rgba(168, 85, 247, 0.12), transparent 30rem),
+    linear-gradient(180deg, rgba(3, 7, 18, 0.2), rgba(3, 7, 18, 0.62));
+}
+
+.ai-scene-fallback {
+  z-index: 1;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(34, 211, 238, 0.13), transparent 26rem),
+    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.13), transparent 24rem),
+    radial-gradient(circle at 50% 80%, rgba(168, 85, 247, 0.1), transparent 28rem),
+    repeating-linear-gradient(90deg, rgba(125, 211, 252, 0.03) 0 1px, transparent 1px 80px),
+    repeating-linear-gradient(0deg, rgba(167, 139, 250, 0.025) 0 1px, transparent 1px 80px);
+  animation: ambientFloat 18s ease-in-out infinite;
+}
+
+.ai-page-atmosphere {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(99, 102, 241, 0.12), transparent 28rem),
+    radial-gradient(circle at 18% 58%, rgba(34, 211, 238, 0.075), transparent 25rem),
+    radial-gradient(circle at 82% 62%, rgba(168, 85, 247, 0.08), transparent 27rem),
+    linear-gradient(135deg, rgba(2, 6, 23, 0.36), rgba(9, 9, 16, 0.54) 48%, rgba(2, 6, 23, 0.34));
+}
+
+.ai-page-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.38), transparent 30%, rgba(2, 6, 23, 0.34)),
+    repeating-linear-gradient(90deg, rgba(125, 211, 252, 0.025) 0 1px, transparent 1px 120px);
+  mask-image: radial-gradient(circle at 50% 44%, black, transparent 82%);
+}
+
+.ai-page-atmosphere > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ai-hologram-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.8;
+  background:
+    linear-gradient(105deg, transparent 0%, transparent 42%, rgba(147, 197, 253, 0.05) 49%, rgba(255, 255, 255, 0.065) 50%, rgba(34, 211, 238, 0.035) 51%, transparent 58%, transparent 100%),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(125, 211, 252, 0.018) 3px 4px);
+  background-size: 220% 100%, 100% 7px;
+  animation: aiSweep 9s ease-in-out infinite, aiScan 4s linear infinite;
+}
+
+.ai-ambient-lights {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.9;
+  background:
+    conic-gradient(from 130deg at 20% 10%, transparent, rgba(34, 211, 238, 0.045), transparent 30%),
+    conic-gradient(from 310deg at 82% 70%, transparent, rgba(168, 85, 247, 0.04), transparent 28%);
+  filter: blur(0.5px);
+}
+
+.ai-glass-panel {
+  position: relative;
+  isolation: isolate;
+  transform-style: preserve-3d;
+  will-change: transform;
+  box-shadow:
+    0 28px 80px -34px rgba(0, 0, 0, 0.78),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(125, 211, 252, 0.035);
+}
+
+.ai-glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(520px circle at var(--spot-x, 50%) var(--spot-y, 0%), rgba(125, 211, 252, 0.16), transparent 44%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 34%, rgba(99, 102, 241, 0.045));
+  opacity: 0.72;
+  transition: opacity 280ms ease;
+}
+
+.ai-glass-panel::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(125, 211, 252, 0.018) 5px 6px);
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.ai-glass-panel:hover::after {
+  opacity: 1;
+}
+
+.ai-magnetic {
+  position: relative;
+  isolation: isolate;
+  will-change: transform;
+}
+
+.ai-magnetic::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.25), rgba(129, 140, 248, 0.12), rgba(192, 132, 252, 0.25));
+  opacity: 0;
+  filter: blur(16px);
+  transition: opacity 260ms ease;
+}
+
+.ai-magnetic:hover::after {
+  opacity: 0.68;
+}
+
+.ai-cursor-core,
+.ai-cursor-halo,
+.ai-cursor-aura {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+  pointer-events: none;
+  border-radius: 999px;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+.ai-cursor-core {
+  width: 8px;
+  height: 8px;
+  background: #e0f2fe;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.88), 0 0 36px rgba(129, 140, 248, 0.5);
+  opacity: 0.72;
+}
+
+.ai-cursor-halo {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(125, 211, 252, 0.44);
+  box-shadow: inset 0 0 18px rgba(125, 211, 252, 0.12), 0 0 26px rgba(99, 102, 241, 0.18);
+  opacity: 0.42;
+}
+
+.ai-cursor-aura {
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.09), rgba(99, 102, 241, 0.04) 36%, transparent 68%);
+  opacity: 0.72;
+}
+
+.ai-loader-scan {
+  background:
+    linear-gradient(180deg, transparent, rgba(34, 211, 238, 0.06), transparent),
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(125, 211, 252, 0.025) 5px 6px);
+  background-size: 100% 220%, 100% 8px;
+  animation: aiLoaderScan 2.6s ease-in-out infinite;
+}
+
+.ai-card-sweep {
+  overflow: hidden;
+}
+
+.ai-card-sweep::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%) skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  animation: aiCardSweep 1.8s ease-in-out infinite;
+}
+
+@keyframes aiSweep {
+  0%, 20% {
+    background-position: -120% 0, 0 0;
+  }
+  70%, 100% {
+    background-position: 160% 0, 0 0;
+  }
+}
+
+@keyframes aiScan {
+  from {
+    background-position-y: 0, 0;
+  }
+  to {
+    background-position-y: 0, 56px;
+  }
+}
+
+@keyframes aiLoaderScan {
+  0%, 100% {
+    background-position: 0 -100%, 0 0;
+  }
+  50% {
+    background-position: 0 100%, 0 28px;
+  }
+}
+
+@keyframes aiCardSweep {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  58%, 100% {
+    transform: translateX(120%) skewX(-18deg);
+  }
+}
+
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+  .ai-cursor-core,
+  .ai-cursor-halo,
+  .ai-cursor-aura {
+    display: none;
+  }
+
+  .ai-hologram-overlay {
+    opacity: 0.42;
+    animation: none;
+  }
+
+  .ai-glass-panel {
+    transform: none !important;
+  }
+}
