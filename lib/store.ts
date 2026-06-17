@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+export type TestType = 'text' | 'voice' | 'game';
+
 export interface Question {
   id: string;
   question: string;
@@ -20,8 +22,12 @@ export interface TestResult {
 
 export interface TestSession {
   sessionId: string;
-  testType: 'text' | 'voice' | 'game';
+  testType: TestType;
   timestamp: Date;
+  studentCode: string;
+  studentName: string;
+  studentClass: number;
+  studentAge: number;
   questions: Question[];
   results: TestResult[];
   gameScores?: {
@@ -32,8 +38,14 @@ export interface TestSession {
 }
 
 // Session storage helper functions
+const COMPLETED_TESTS_KEY = 'completedTestTypes';
+
 export const saveTestSession = (session: TestSession) => {
   try {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     const existingSessions = getTestSessions();
     existingSessions.push(session);
     sessionStorage.setItem('testSessions', JSON.stringify(existingSessions));
@@ -44,6 +56,10 @@ export const saveTestSession = (session: TestSession) => {
 
 export const getTestSessions = (): TestSession[] => {
   try {
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
     const sessions = sessionStorage.getItem('testSessions');
     return sessions ? JSON.parse(sessions) : [];
   } catch (error) {
@@ -54,9 +70,46 @@ export const getTestSessions = (): TestSession[] => {
 
 export const clearTestSessions = () => {
   try {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     sessionStorage.removeItem('testSessions');
   } catch (error) {
     console.error('Error clearing test sessions:', error);
+  }
+};
+
+export const getCompletedTestTypes = (): TestType[] => {
+  try {
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
+    const completedTypes = sessionStorage.getItem(COMPLETED_TESTS_KEY);
+    return completedTypes ? JSON.parse(completedTypes) : [];
+  } catch (error) {
+    console.error('Error getting completed test types:', error);
+    return [];
+  }
+};
+
+export const markTestCompleted = (testType: TestType) => {
+  try {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const completedTypes = getCompletedTestTypes();
+
+    if (!completedTypes.includes(testType)) {
+      sessionStorage.setItem(
+        COMPLETED_TESTS_KEY,
+        JSON.stringify([...completedTypes, testType])
+      );
+    }
+  } catch (error) {
+    console.error('Error marking test as completed:', error);
   }
 };
 
@@ -65,9 +118,10 @@ interface TestState {
   studentCode: string;
   studentClass: number;
   studentName: string;
+  studentAge: number;
   
   // Test configuration
-  testType: 'text' | 'voice' | 'game' | null;
+  testType: TestType | null;
   currentQuestionIndex: number;
   questions: Question[];
   
@@ -84,8 +138,8 @@ interface TestState {
   attentionScore: number;
   
   // Actions
-  setStudentInfo: (code: string, classLevel: number, name: string) => void;
-  setTestType: (type: 'text' | 'voice' | 'game') => void;
+  setStudentInfo: (code: string, classLevel: number, name: string, age?: number) => void;
+  setTestType: (type: TestType) => void;
   setQuestions: (questions: Question[]) => void;
   addResult: (result: TestResult) => void;
   nextQuestion: () => void;
@@ -101,6 +155,7 @@ export const useTestStore = create<TestState>((set) => ({
   studentCode: '',
   studentClass: 0,
   studentName: '',
+  studentAge: 0,
   testType: null,
   currentQuestionIndex: 0,
   questions: [],
@@ -114,11 +169,10 @@ export const useTestStore = create<TestState>((set) => ({
   attentionScore: 100,
   
   // Actions
-  setStudentInfo: (code, classLevel, name) =>
-    set({ studentCode: code, studentClass: classLevel, studentName: name }),
+  setStudentInfo: (code, classLevel, name, age = 0) =>
+    set({ studentCode: code, studentClass: classLevel, studentName: name, studentAge: age }),
   
-  setTestType: (type) =>
-    set({ testType: type }),
+  setTestType: (type) => set({ testType: type }),
   
   setQuestions: (questions) =>
     set({ questions, currentQuestionIndex: 0 }),
@@ -164,6 +218,10 @@ export const useTestStore = create<TestState>((set) => ({
           sessionId: `session-${Date.now()}`,
           testType: state.testType,
           timestamp: new Date(),
+          studentCode: state.studentCode,
+          studentName: state.studentName,
+          studentClass: state.studentClass,
+          studentAge: state.studentAge,
           questions: state.questions,
           results: state.results,
           gameScores: {

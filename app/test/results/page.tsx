@@ -1,37 +1,41 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Trophy, Brain, Clock, Target, TrendingUp, CheckCircle, XCircle, Home, Loader2, FileText } from 'lucide-react';
-import { useTestStore, getTestSessions } from '@/lib/store';
+import { getTestSessions, markTestCompleted, useTestStore } from '@/lib/store';
 import { analyzePerformance, generateComprehensiveReport } from '@/lib/openrouter';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function ResultsPage() {
   const router = useRouter();
-  const { results, gameScores, studentCode, studentClass, studentName, questions, attentionScore, saveCurrentSession } = useTestStore();
+  const hasInitialized = useRef(false);
+  const {
+    results,
+    gameScores,
+    studentCode,
+    studentClass,
+    studentName,
+    studentAge,
+    testType,
+    attentionScore,
+    saveCurrentSession,
+  } = useTestStore();
   const [analysis, setAnalysis] = useState<string>('');
   const [comprehensiveReport, setComprehensiveReport] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showComprehensiveReport, setShowComprehensiveReport] = useState(false);
 
-  useEffect(() => {
-    // Redirect if no results
-    if (results.length === 0 && !gameScores.templeRun && !gameScores.reflexGame && !gameScores.memoryGame) {
-      router.push('/test');
-      return;
-    }
-    
-    // Save current session to session storage
-    saveCurrentSession();
-    
-    // Analyze results
-    analyzeResults();
-  }, []);
+  const calculateScore = useCallback(() => {
+    if (results.length === 0) return 0;
+    const correctAnswers = results.filter(r => r.isCorrect).length;
+    const totalQuestions = results.length;
+    return Math.round((correctAnswers / totalQuestions) * 100);
+  }, [results]);
 
-  const analyzeResults = async () => {
+  const analyzeResults = useCallback(async () => {
     try {
       if (results.length === 0) {
         setAnalysis('No test results available. Please complete a test first.');
@@ -40,10 +44,15 @@ export default function ResultsPage() {
       }
 
       const reactionTimes = results.map(r => r.reactionTime);
-      const performanceAnalysis = await analyzePerformance(results, reactionTimes, studentClass);
+      const performanceAnalysis = await analyzePerformance(
+        results,
+        reactionTimes,
+        studentClass,
+        studentAge,
+        testType || 'text'
+      );
       setAnalysis(performanceAnalysis);
 
-      // Save results to Firestore
       if (studentCode) {
         const userDocRef = doc(db, 'users', studentCode);
         await updateDoc(userDocRef, {
@@ -65,14 +74,32 @@ export default function ResultsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attentionScore, calculateScore, gameScores, results, studentAge, studentClass, studentCode, testType]);
 
-  const calculateScore = () => {
-    if (results.length === 0) return 0;
-    const correctAnswers = results.filter(r => r.isCorrect).length;
-    const totalQuestions = results.length;
-    return Math.round((correctAnswers / totalQuestions) * 100);
-  };
+  useEffect(() => {
+    if (hasInitialized.current) {
+      return;
+    }
+
+    // Redirect if no results
+    if (results.length === 0 && !gameScores.templeRun && !gameScores.reflexGame && !gameScores.memoryGame) {
+      router.push('/test');
+      return;
+    }
+
+    hasInitialized.current = true;
+
+    // Save current session to session storage
+    saveCurrentSession();
+    if (testType) {
+      markTestCompleted(testType);
+    }
+
+    // Analyze results
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void analyzeResults();
+  }, [analyzeResults, gameScores.memoryGame, gameScores.reflexGame, gameScores.templeRun, results.length, router, saveCurrentSession, testType]);
 
   const calculateIQScore = () => {
     if (results.length === 0) return 100;
@@ -94,12 +121,13 @@ export default function ResultsPage() {
     setLoading(true);
     try {
       const allSessions = getTestSessions();
+
       if (allSessions.length === 0) {
         setComprehensiveReport('No test sessions found. Complete at least one test to generate a comprehensive report.');
         return;
       }
 
-      const report = await generateComprehensiveReport(allSessions, studentClass, studentName);
+      const report = await generateComprehensiveReport(allSessions, studentClass, studentName, studentAge);
       setComprehensiveReport(report);
       setShowComprehensiveReport(true);
     } catch (error) {
@@ -113,6 +141,7 @@ export default function ResultsPage() {
   const avgReactionTime = results.length > 0
     ? Math.round(results.reduce((sum, r) => sum + r.reactionTime, 0) / results.length)
     : 0;
+  const sessionCount = getTestSessions().length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-zinc-900 to-slate-950 text-white py-12 px-4">
@@ -130,7 +159,7 @@ export default function ResultsPage() {
             Test Results
           </h1>
           <p className="text-zinc-400 text-lg">
-            {studentName} - Class {studentClass}
+            {studentName} - Class {studentClass}{studentAge ? ` - Age ${studentAge}` : ''}
           </p>
         </motion.div>
 
@@ -223,7 +252,7 @@ export default function ResultsPage() {
           >
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               <Brain className="w-6 h-6 text-purple-400" />
-              AI Analysis
+              Agent Analysis
             </h2>
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -308,7 +337,7 @@ export default function ResultsPage() {
           >
             <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
               <FileText className="w-8 h-8 text-purple-400" />
-              Comprehensive Assessment Report
+              Session Report Agent
             </h2>
             <div className="bg-zinc-950/60 rounded-2xl p-6">
               {loading ? (
@@ -324,7 +353,7 @@ export default function ResultsPage() {
               )}
             </div>
             <p className="text-xs text-zinc-500 mt-4 text-center">
-              This report analyzes all test sessions stored in your browser. Total sessions: {getTestSessions().length}
+              This report analyzes all test sessions stored in your browser session storage. Total sessions: {sessionCount}
             </p>
           </motion.div>
         )}

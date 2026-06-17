@@ -1,7 +1,13 @@
 import axios from 'axios';
+import type { Question, TestResult, TestSession } from './store';
 
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
+const IQ_MODEL = process.env.NEXT_PUBLIC_IQ_MODEL || 'google/gemini-3.5-flash';
+const REPORT_MODEL = process.env.NEXT_PUBLIC_REPORT_MODEL || IQ_MODEL;
+const TTS_MODEL = process.env.NEXT_PUBLIC_TTS_MODEL || 'google/gemini-flash-1.5-8b';
+const QUESTION_BATCH_SIZE = 1;
+const QUESTION_GENERATION_MAX_TOKENS = 380;
+const QUESTION_REPAIR_MAX_TOKENS = 420;
+const MIN_OPENROUTER_TOKENS = 180;
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -24,431 +30,858 @@ export interface OpenRouterResponse {
   };
 }
 
-// Fallback mock questions if API fails
-const getMockQuestions = (classLevel: number, count: number) => {
-  const mockQuestions = [
-    {
-      id: "q1",
-      question: "If all roses are flowers and some flowers fade quickly, which statement must be true?",
-      options: ["All roses fade quickly", "Some roses may fade quickly", "No roses fade quickly", "All flowers are roses"],
-      correctAnswer: 1,
-      difficulty: "medium",
-      explanation: "Since some flowers fade quickly and all roses are flowers, it's possible (but not certain) that some roses fade quickly.",
-      timeLimit: 60
-    },
-    {
-      id: "q2",
-      question: "What comes next in the sequence: 2, 6, 12, 20, 30, ?",
-      options: ["40", "42", "38", "36"],
-      correctAnswer: 1,
-      difficulty: "medium",
-      explanation: "The pattern adds consecutive even numbers: +4, +6, +8, +10, +12. So 30 + 12 = 42",
-      timeLimit: 60
-    },
-    {
-      id: "q3",
-      question: "If it takes 5 machines 5 minutes to make 5 widgets, how long would it take 100 machines to make 100 widgets?",
-      options: ["100 minutes", "5 minutes", "20 minutes", "1 minute"],
-      correctAnswer: 1,
-      difficulty: "hard",
-      explanation: "Each machine makes 1 widget in 5 minutes. So 100 machines make 100 widgets in 5 minutes.",
-      timeLimit: 60
-    },
-    {
-      id: "q4",
-      question: "Which word does not belong with the others?",
-      options: ["Square", "Triangle", "Circle", "Rectangle"],
-      correctAnswer: 2,
-      difficulty: "easy",
-      explanation: "Circle is the only shape without corners/angles.",
-      timeLimit: 60
-    },
-    {
-      id: "q5",
-      question: "If you rearrange the letters 'CIFAIPC' you would have the name of a(n):",
-      options: ["City", "Animal", "Ocean", "Country"],
-      correctAnswer: 2,
-      difficulty: "medium",
-      explanation: "CIFAIPC rearranged spells PACIFIC, which is an ocean.",
-      timeLimit: 60
-    },
-    {
-      id: "q6",
-      question: "A book costs $7 plus half its price. What does the book cost?",
-      options: ["$10.50", "$14", "$7", "$21"],
-      correctAnswer: 1,
-      difficulty: "hard",
-      explanation: "Let x be the price. x = 7 + x/2. Solving: x/2 = 7, so x = 14",
-      timeLimit: 60
-    },
-    {
-      id: "q7",
-      question: "Which number should replace the question mark? 3, 7, 15, 31, ?",
-      options: ["62", "63", "64", "65"],
-      correctAnswer: 1,
-      difficulty: "medium",
-      explanation: "Each number is double the previous number plus 1: 3×2+1=7, 7×2+1=15, 15×2+1=31, 31×2+1=63",
-      timeLimit: 60
-    },
-    {
-      id: "q8",
-      question: "If some Smaugs are Thors and some Thors are Thrains, which statement must be true?",
-      options: ["All Smaugs are Thrains", "Some Smaugs are Thrains", "No Smaugs are Thrains", "Cannot be determined"],
-      correctAnswer: 3,
-      difficulty: "hard",
-      explanation: "We cannot determine if any Smaugs are Thrains because we don't know if the Smaugs that are Thors overlap with the Thors that are Thrains.",
-      timeLimit: 60
-    },
-    {
-      id: "q9",
-      question: "What is the missing number? 1, 1, 2, 3, 5, 8, ?",
-      options: ["11", "13", "12", "10"],
-      correctAnswer: 1,
-      difficulty: "easy",
-      explanation: "This is the Fibonacci sequence where each number is the sum of the previous two: 5 + 8 = 13",
-      timeLimit: 60
-    },
-    {
-      id: "q10",
-      question: "Which comes next: J, F, M, A, M, ?",
-      options: ["J", "S", "A", "N"],
-      correctAnswer: 0,
-      difficulty: "medium",
-      explanation: "These are the first letters of months: January, February, March, April, May, June",
-      timeLimit: 60
-    }
-  ];
+export interface StudentProfile {
+  age: number;
+  classLevel: number;
+  studentName?: string;
+}
 
-  return mockQuestions.slice(0, count);
+type QuestionMode = 'text' | 'voice';
+
+const estimateAgeFromClass = (classLevel: number) => Math.max(6, classLevel + 5);
+
+const cleanJsonPayload = (content: string) => {
+  const withoutCodeFence = content.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+  const firstBracket = withoutCodeFence.indexOf('[');
+  const lastBracket = withoutCodeFence.lastIndexOf(']');
+  const firstBrace = withoutCodeFence.indexOf('{');
+  const lastBrace = withoutCodeFence.lastIndexOf('}');
+
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    return withoutCodeFence.slice(firstBracket, lastBracket + 1);
+  }
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return withoutCodeFence.slice(firstBrace, lastBrace + 1);
+  }
+
+  return withoutCodeFence;
 };
 
-/**
- * Generate IQ questions using Claude Sonnet 3.5
- */
+const normalizeJsonCandidate = (content: string) =>
+  content
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/,\s*([}\]])/g, '$1')
+    .trim();
+
+const decodeLooseJsonString = (value: string) => {
+  const trimmed = value.trim().replace(/^["']|["']$/g, '');
+
+  return trimmed
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'")
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .trim();
+};
+
+const extractLooseField = (block: string, field: string, nextFields: string[]) => {
+  const nextFieldPattern = nextFields.length > 0
+    ? `\\s*,\\s*"?(?:${nextFields.join('|')})"?\\s*:`
+    : '\\s*$';
+  const pattern = new RegExp(
+    `"${field}"\\s*:\\s*([\\s\\S]*?)(?=${nextFieldPattern})`,
+    'i'
+  );
+
+  return block.match(pattern)?.[1]?.trim() || '';
+};
+
+const parseLooseOptions = (rawOptions: string) => {
+  const normalized = rawOptions.trim().replace(/^\[/, '').replace(/\]$/, '');
+
+  if (!normalized) {
+    return [];
+  }
+
+  return normalized
+    .split(/\s*,\s*/)
+    .map((option) => decodeLooseJsonString(option))
+    .filter(Boolean)
+    .slice(0, 4);
+};
+
+const parseLooseQuestionArrayPayload = (content: string): unknown => {
+  const baseCandidate = normalizeJsonCandidate(cleanJsonPayload(content));
+  const objectMatches =
+    baseCandidate.match(/\{[\s\S]*?\}(?=\s*,\s*\{|\s*\]|\s*$)/g) || [];
+
+  const recoveredQuestions = objectMatches
+    .map((block, index) => {
+      const id = decodeLooseJsonString(
+        extractLooseField(block, 'id', ['question', 'options', 'correctAnswer', 'difficulty', 'explanation', 'timeLimit'])
+      ) || `q${index + 1}`;
+      const question = decodeLooseJsonString(
+        extractLooseField(block, 'question', ['options', 'correctAnswer', 'difficulty', 'explanation', 'timeLimit'])
+      );
+      const options = parseLooseOptions(
+        extractLooseField(block, 'options', ['correctAnswer', 'difficulty', 'explanation', 'timeLimit'])
+      );
+      const correctAnswer = Number(
+        decodeLooseJsonString(
+          extractLooseField(block, 'correctAnswer', ['difficulty', 'explanation', 'timeLimit'])
+        )
+      );
+      const difficulty = decodeLooseJsonString(
+        extractLooseField(block, 'difficulty', ['explanation', 'timeLimit'])
+      );
+      const explanation = decodeLooseJsonString(
+        extractLooseField(block, 'explanation', ['timeLimit'])
+      );
+      const timeLimit = Number(
+        decodeLooseJsonString(extractLooseField(block, 'timeLimit', []))
+      );
+
+      if (!question || options.length !== 4 || Number.isNaN(correctAnswer)) {
+        return null;
+      }
+
+      return {
+        id,
+        question,
+        options,
+        correctAnswer,
+        difficulty,
+        explanation,
+        timeLimit,
+      };
+    })
+    .filter(Boolean);
+
+  if (recoveredQuestions.length > 0) {
+    return recoveredQuestions;
+  }
+
+  throw new Error('Invalid JSON response');
+};
+
+const parseQuestionArrayPayload = (content: string): unknown => {
+  const baseCandidate = cleanJsonPayload(content);
+  const candidates = [
+    baseCandidate,
+    normalizeJsonCandidate(baseCandidate),
+  ];
+
+  let lastError: Error | null = null;
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        'questions' in parsed &&
+        Array.isArray((parsed as { questions?: unknown }).questions)
+      ) {
+        return (parsed as { questions: unknown[] }).questions;
+      }
+
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        'question' in parsed &&
+        'options' in parsed
+      ) {
+        return [parsed];
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Invalid JSON response');
+    }
+  }
+
+  try {
+    return parseLooseQuestionArrayPayload(baseCandidate);
+  } catch (error) {
+    lastError = error instanceof Error ? error : lastError;
+  }
+
+  throw lastError || new Error('Invalid JSON response');
+};
+
+const sanitizeQuestions = (
+  rawQuestions: unknown,
+  count: number,
+  fallbackQuestions: Question[]
+): Question[] => {
+  if (!Array.isArray(rawQuestions)) {
+    return fallbackQuestions;
+  }
+
+  const normalized = rawQuestions
+    .slice(0, count)
+    .map((item, index): Question | null => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const question = item as Partial<Question>;
+      const options = Array.isArray(question.options)
+        ? question.options.map((option) => String(option)).slice(0, 4)
+        : [];
+      const correctAnswer = Number(question.correctAnswer);
+      const difficulty = question.difficulty === 'easy' || question.difficulty === 'medium' || question.difficulty === 'hard'
+        ? question.difficulty
+        : index < 3
+        ? 'easy'
+        : index < 7
+        ? 'medium'
+        : 'hard';
+
+      if (!question.question || options.length !== 4 || Number.isNaN(correctAnswer) || correctAnswer < 0 || correctAnswer > 3) {
+        return null;
+      }
+
+      return {
+        id: question.id || `q${index + 1}`,
+        question: String(question.question),
+        options,
+        correctAnswer,
+        difficulty,
+        explanation: question.explanation ? String(question.explanation) : 'The correct option best matches the reasoning pattern in the question.',
+        timeLimit: Math.max(30, Number(question.timeLimit) || 60),
+      };
+    })
+    .filter((question): question is Question => Boolean(question));
+
+  return normalized.length === count ? normalized : fallbackQuestions;
+};
+
+const normalizeQuestionIds = (questions: Question[], startIndex: number) =>
+  questions.map((question, index) => ({
+    ...question,
+    id: `q${startIndex + index + 1}`,
+  }));
+
+const getTargetDifficulty = (index: number, totalCount: number): Question['difficulty'] => {
+  if (index < Math.max(3, Math.ceil(totalCount * 0.3))) {
+    return 'easy';
+  }
+
+  if (index < Math.max(7, Math.ceil(totalCount * 0.7))) {
+    return 'medium';
+  }
+
+  return 'hard';
+};
+
+const buildBatchDifficultyGuide = (
+  startIndex: number,
+  batchCount: number,
+  totalCount: number
+) =>
+  Array.from({ length: batchCount }, (_, index) => {
+    const questionNumber = startIndex + index + 1;
+    return `q${questionNumber}: ${getTargetDifficulty(startIndex + index, totalCount)}`;
+  }).join(', ');
+
+const getFallbackQuestions = (profile: StudentProfile, count: number, mode: QuestionMode): Question[] => {
+  const ageLabel = profile.age || estimateAgeFromClass(profile.classLevel);
+  const deliveryHint = mode === 'voice'
+    ? 'Listen carefully and answer by saying the option letter.'
+    : 'Read carefully and choose the best option.';
+
+  const templates: Question[] = [
+    {
+      id: 'q1',
+      question: `A ${ageLabel}-year-old student in class ${profile.classLevel} is arranging books from thinnest to thickest. Which skill is mainly being used?`,
+      options: ['Pattern matching', 'Ordering by size', 'Guessing randomly', 'Remembering a story'],
+      correctAnswer: 1,
+      difficulty: 'easy',
+      explanation: 'The student is comparing the books and placing them in a logical order by size.',
+      timeLimit: 60,
+    },
+    {
+      id: 'q2',
+      question: `What comes next in the pattern: 3, 6, 9, 12, ? ${deliveryHint}`,
+      options: ['13', '14', '15', '16'],
+      correctAnswer: 2,
+      difficulty: 'easy',
+      explanation: 'The pattern increases by 3 each time, so 12 becomes 15.',
+      timeLimit: 45,
+    },
+    {
+      id: 'q3',
+      question: 'If all squares are shapes and all shapes have sides, what must be true?',
+      options: ['All squares have sides', 'All shapes are squares', 'Some squares have no sides', 'Only circles have sides'],
+      correctAnswer: 0,
+      difficulty: 'medium',
+      explanation: 'If squares are shapes and shapes have sides, then squares must also have sides.',
+      timeLimit: 60,
+    },
+    {
+      id: 'q4',
+      question: 'Which number should replace the question mark: 5, 10, 20, 40, ?',
+      options: ['45', '60', '70', '80'],
+      correctAnswer: 3,
+      difficulty: 'medium',
+      explanation: 'Each number doubles, so 40 becomes 80.',
+      timeLimit: 60,
+    },
+    {
+      id: 'q5',
+      question: 'Which word does not belong with the others?',
+      options: ['Triangle', 'Rectangle', 'Circle', 'Square'],
+      correctAnswer: 2,
+      difficulty: 'easy',
+      explanation: 'A circle is the only shape without sides or corners.',
+      timeLimit: 45,
+    },
+    {
+      id: 'q6',
+      question: 'A class monitor needs 2 minutes to label 1 notebook. How long will it take to label 6 notebooks at the same speed?',
+      options: ['8 minutes', '10 minutes', '12 minutes', '14 minutes'],
+      correctAnswer: 2,
+      difficulty: 'medium',
+      explanation: 'If each notebook takes 2 minutes, then 6 notebooks take 12 minutes.',
+      timeLimit: 60,
+    },
+    {
+      id: 'q7',
+      question: 'Which letter comes next: A, C, E, G, ?',
+      options: ['H', 'I', 'J', 'K'],
+      correctAnswer: 1,
+      difficulty: 'medium',
+      explanation: 'The pattern skips one letter each time, so the next letter is I.',
+      timeLimit: 45,
+    },
+    {
+      id: 'q8',
+      question: 'If some pencils are blue and all blue things are bright, what can be true?',
+      options: ['All pencils are bright', 'Some pencils are bright', 'No pencils are bright', 'Blue things are never bright'],
+      correctAnswer: 1,
+      difficulty: 'hard',
+      explanation: 'Because some pencils are blue and all blue things are bright, some pencils are bright.',
+      timeLimit: 60,
+    },
+    {
+      id: 'q9',
+      question: 'What is the missing number: 1, 4, 9, 16, ?',
+      options: ['20', '24', '25', '36'],
+      correctAnswer: 2,
+      difficulty: 'hard',
+      explanation: 'These are square numbers: 1, 2 squared, 3 squared, 4 squared, so the next is 5 squared, which is 25.',
+      timeLimit: 60,
+    },
+    {
+      id: 'q10',
+      question: mode === 'voice'
+        ? 'Listen to the four options and choose the one that best completes the analogy: Bird is to nest as bee is to what?'
+        : 'Complete the analogy: Bird is to nest as bee is to what?',
+      options: ['Leaf', 'Hive', 'Tree', 'Garden'],
+      correctAnswer: 1,
+      difficulty: 'easy',
+      explanation: 'A bird lives in a nest and a bee lives in a hive.',
+      timeLimit: 45,
+    },
+  ];
+
+  return templates.slice(0, count).map((question, index) => ({
+    ...question,
+    id: `q${index + 1}`,
+  }));
+};
+
+const summarizeSessions = (allSessions: TestSession[]) =>
+  allSessions.map((session, index) => {
+    const totalCount = session.results?.length || 0;
+    const correctCount = session.results?.filter((result) => result.isCorrect).length || 0;
+    const accuracy = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+    const avgReaction = totalCount > 0
+      ? Math.round(session.results.reduce((sum, result) => sum + result.reactionTime, 0) / totalCount)
+      : 0;
+
+    return {
+      sessionNumber: index + 1,
+      testType: session.testType,
+      studentClass: session.studentClass,
+      studentAge: session.studentAge,
+      accuracy,
+      correctCount,
+      totalCount,
+      avgReaction,
+      gameScores: session.gameScores || null,
+      questions: (session.questions || []).map((question) => ({
+        question: question.question,
+        difficulty: question.difficulty,
+        answeredCorrectly: session.results?.find((result) => result.questionId === question.id)?.isCorrect ?? false,
+      })),
+    };
+  });
+
+const getErrorMessage = (error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    const responseData = error.response?.data;
+
+    if (typeof responseData === 'string') {
+      return responseData;
+    }
+
+    if (responseData && typeof responseData === 'object') {
+      const data = responseData as Record<string, unknown>;
+
+      if (typeof data.error === 'string') {
+        return data.error;
+      }
+
+      if (data.error && typeof data.error === 'object') {
+        const nested = data.error as Record<string, unknown>;
+        if (typeof nested.message === 'string') {
+          return nested.message;
+        }
+      }
+
+      if (typeof data.message === 'string') {
+        return data.message;
+      }
+
+      try {
+        return JSON.stringify(responseData);
+      } catch {
+        return error.message;
+      }
+    }
+
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Unknown error';
+};
+
+const getAffordableTokenBudget = (error: unknown) => {
+  const message = getErrorMessage(error);
+  const match = message.match(/can only afford (\d+)/i);
+
+  if (!match) {
+    return null;
+  }
+
+  const affordable = Number(match[1]);
+
+  if (Number.isNaN(affordable)) {
+    return null;
+  }
+
+  return affordable;
+};
+
+async function callOpenRouter(
+  messages: Message[],
+  model: string,
+  maxTokens: number,
+  temperature: number
+): Promise<string> {
+  const response = await axios.post<{ content?: string; error?: string }>(
+    '/api/openrouter',
+    {
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    }
+  );
+
+  if (response.data.error) {
+    throw new Error(response.data.error);
+  }
+
+  const content = response.data.content?.trim();
+
+  if (!content) {
+    throw new Error('The OpenRouter proxy returned an empty response.');
+  }
+
+  return content;
+}
+
+async function callOpenRouterWithBudgetFallback(
+  messages: Message[],
+  model: string,
+  maxTokens: number,
+  temperature: number,
+  minimumTokens: number = MIN_OPENROUTER_TOKENS
+): Promise<string> {
+  try {
+    return await callOpenRouter(messages, model, maxTokens, temperature);
+  } catch (error: unknown) {
+    const affordableBudget = getAffordableTokenBudget(error);
+
+    if (affordableBudget === null) {
+      throw error;
+    }
+
+    const retryBudget = Math.max(
+      minimumTokens,
+      Math.min(maxTokens - 40, affordableBudget - 20)
+    );
+
+    if (retryBudget >= maxTokens) {
+      throw error;
+    }
+
+    return callOpenRouter(messages, model, retryBudget, temperature);
+  }
+}
+
+async function repairQuestionJson(
+  rawContent: string,
+  count: number,
+  mode: QuestionMode,
+  startIndex: number = 0
+): Promise<unknown> {
+  const expectedShape = count === 1 ? 'JSON object' : 'JSON array';
+  const repairMessages: Message[] = [
+    {
+      role: 'system',
+      content:
+        `You are a JSON repair agent. Convert malformed question output into strictly valid ${expectedShape}. Return only JSON and do not add explanations, markdown, or comments.`,
+    },
+    {
+      role: 'user',
+      content: `Repair this malformed ${mode} IQ question JSON into valid ${expectedShape} output.
+
+Rules:
+- Return only valid JSON.
+- Preserve the intended meaning of each question.
+- ${count === 1
+    ? `The object must contain: id, question, options, correctAnswer, difficulty, explanation, timeLimit.`
+    : `Each item must contain: id, question, options, correctAnswer, difficulty, explanation, timeLimit.`}
+- Use sequential ids from q${startIndex + 1} to q${startIndex + count}.
+- Ensure options has exactly 4 string values.
+- Ensure correctAnswer is a zero-based integer.
+
+Malformed content:
+${rawContent}`,
+    },
+  ];
+  const repairedContent = await callOpenRouterWithBudgetFallback(
+    repairMessages,
+    IQ_MODEL,
+    QUESTION_REPAIR_MAX_TOKENS,
+    0.1
+  );
+
+  return parseQuestionArrayPayload(repairedContent);
+}
+
+async function generateQuestionBatch(
+  profile: StudentProfile,
+  batchCount: number,
+  mode: QuestionMode,
+  startIndex: number,
+  totalCount: number
+): Promise<Question[]> {
+  const fallbackBatch = normalizeQuestionIds(
+    getFallbackQuestions(profile, totalCount, mode).slice(startIndex, startIndex + batchCount),
+    startIndex
+  );
+  const systemPrompt = mode === 'voice'
+    ? `You are an Oral IQ Test Agent. Create spoken-question IQ items for a student aged ${profile.age} in class ${profile.classLevel}. Questions must be easy to read aloud, concise, and answerable by saying option A, B, C, or D.`
+    : `You are a Written IQ Test Agent. Create age-appropriate IQ questions for a student aged ${profile.age} in class ${profile.classLevel}. Questions should test logic, patterns, reasoning, and verbal intelligence without being too advanced for the student's age.`;
+  const difficultyGuide = buildBatchDifficultyGuide(startIndex, batchCount, totalCount);
+  const responseShape = batchCount === 1 ? 'object' : 'array';
+  const userPrompt = `Generate ${batchCount} ${mode === 'voice' ? 'oral' : 'written'} IQ questions for this student.
+Age: ${profile.age}
+Class: ${profile.classLevel}
+Student name: ${profile.studentName || 'Student'}
+Question ids: q${startIndex + 1} to q${startIndex + batchCount}
+Target difficulties: ${difficultyGuide}
+
+Return ONLY a valid JSON ${responseShape}.
+${batchCount === 1
+    ? `Use exactly this object shape:
+{"id":"q${startIndex + 1}","question":"...","options":["A","B","C","D"],"correctAnswer":0,"difficulty":"${getTargetDifficulty(startIndex, totalCount)}","explanation":"...","timeLimit":60}`
+    : `Use exactly this array item shape:
+[{"id":"q${startIndex + 1}","question":"...","options":["A","B","C","D"],"correctAnswer":0,"difficulty":"easy","explanation":"...","timeLimit":60}]`}
+
+Rules:
+- Use exactly 4 options per question.
+- Keep wording age-appropriate and concise.
+- ${mode === 'voice' ? 'Avoid symbols and long option text that are hard to speak aloud.' : 'Keep wording crisp and readable.'}
+- Make sure correctAnswer is a zero-based index.
+- Do not include markdown, commentary, or headings.`;
+  const generationMessages: Message[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ];
+
+  try {
+    const content = await callOpenRouterWithBudgetFallback(
+      generationMessages,
+      IQ_MODEL,
+      QUESTION_GENERATION_MAX_TOKENS,
+      0.25
+    );
+
+    let parsed: unknown;
+
+    try {
+      parsed = parseQuestionArrayPayload(content);
+    } catch {
+      parsed = await repairQuestionJson(content, batchCount, mode, startIndex);
+    }
+
+    return normalizeQuestionIds(
+      sanitizeQuestions(parsed, batchCount, fallbackBatch),
+      startIndex
+    );
+  } catch (error: unknown) {
+    console.error(
+      `Error generating ${mode} IQ question batch ${startIndex + 1}-${startIndex + batchCount}, using fallback:`,
+      getErrorMessage(error)
+    );
+    return fallbackBatch;
+  }
+}
+
+async function generateQuestionsWithAgent(
+  profile: StudentProfile,
+  count: number,
+  mode: QuestionMode
+): Promise<Question[]> {
+  const allQuestions: Question[] = [];
+
+  for (let startIndex = 0; startIndex < count; startIndex += QUESTION_BATCH_SIZE) {
+    const batchCount = Math.min(QUESTION_BATCH_SIZE, count - startIndex);
+    const batchQuestions = await generateQuestionBatch(
+      profile,
+      batchCount,
+      mode,
+      startIndex,
+      count
+    );
+    allQuestions.push(...batchQuestions);
+  }
+
+  return allQuestions.slice(0, count);
+}
+
+export async function generateAdaptiveTextIQQuestions(
+  profile: StudentProfile,
+  count: number = 10
+): Promise<Question[]> {
+  const normalizedProfile = {
+    ...profile,
+    age: profile.age || estimateAgeFromClass(profile.classLevel),
+  };
+
+  return generateQuestionsWithAgent(normalizedProfile, count, 'text');
+}
+
+export async function generateAdaptiveVoiceIQQuestions(
+  profile: StudentProfile,
+  count: number = 10
+): Promise<Question[]> {
+  const normalizedProfile = {
+    ...profile,
+    age: profile.age || estimateAgeFromClass(profile.classLevel),
+  };
+
+  return generateQuestionsWithAgent(normalizedProfile, count, 'voice');
+}
+
 export async function generateIQQuestions(
   classLevel: number,
   questionType: 'logical' | 'mathematical' | 'spatial' | 'verbal',
   count: number = 5
-): Promise<any> {
-  // First, try the API
-  try {
-    const response = await axios.post<OpenRouterResponse>(
-      OPENROUTER_API_URL,
-      {
-        model: 'nvidia/llama-nemotron-rerank-vl-1b-v2:free',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert in creating IQ test questions for students in class ${classLevel}. Generate ${count} age-appropriate ${questionType} reasoning questions in JSON format.`
-          },
-          {
-            role: 'user',
-            content: `Generate ${count} ${questionType} IQ questions for class ${classLevel} students. Return ONLY a JSON array with this structure:
-[
-  {
-    "id": "q1",
-    "question": "question text",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": 0,
-    "difficulty": "easy",
-    "explanation": "why this is the correct answer",
-    "timeLimit": 60
-  }
-]
-
-Make sure to return valid JSON only, no markdown formatting.`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://dextest.app',
-          'X-Title': 'IQ Test Platform'
-        }
-      }
-    );
-
-    const content = response.data.choices[0].message.content;
-    // Remove markdown code blocks if present
-    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    return JSON.parse(cleanContent);
-  } catch (error: any) {
-    console.error('Error generating IQ questions, using fallback:', error.response?.data || error.message);
-    // Fallback to mock questions
-    console.log('Using mock questions as fallback');
-    return getMockQuestions(classLevel, count);
-  }
+): Promise<Question[]> {
+  void questionType;
+  return generateAdaptiveTextIQQuestions(
+    { age: estimateAgeFromClass(classLevel), classLevel },
+    count
+  );
 }
 
-/**
- * Generate text-to-speech using Gemini Flash TTS
- */
 export async function generateTTS(text: string): Promise<string> {
   try {
-    const response = await axios.post<OpenRouterResponse>(
-      OPENROUTER_API_URL,
-      {
-        model: 'google/gemini-flash-1.5-8b',
-        messages: [
-          {
-            role: 'user',
-            content: `Convert this text to speech-ready format: ${text}`
-          }
-        ],
-        temperature: 0.3
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://dextest.app',
-          'X-Title': 'IQ Test Platform'
-        }
-      }
+    return await callOpenRouter(
+      [
+        {
+          role: 'user',
+          content: `Convert this text into a speech-ready script without changing the meaning. Text: ${text}`,
+        },
+      ],
+      TTS_MODEL,
+      600,
+      0.3
     );
-
-    return response.data.choices[0].message.content;
   } catch (error) {
     console.error('Error generating TTS:', error);
     throw error;
   }
 }
 
-/**
- * Analyze student performance using all test sessions
- */
 export async function analyzePerformance(
-  answers: any[],
+  answers: TestResult[],
   reactionTimes: number[],
-  classLevel: number
+  classLevel: number,
+  studentAge: number = 0,
+  testType: 'text' | 'voice' | 'game' = 'text'
 ): Promise<string> {
+  const correctCount = answers.filter((answer) => answer.isCorrect).length;
+  const totalCount = answers.length;
+  const accuracy = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+  const avgReaction = reactionTimes.length > 0
+    ? Math.round(reactionTimes.reduce((sum, time) => sum + time, 0) / reactionTimes.length)
+    : 0;
+
   try {
-    const correctCount = answers.filter(a => a.isCorrect).length;
-    const totalCount = answers.length;
-    const avgReaction = reactionTimes.length > 0 
-      ? reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length 
-      : 0;
-
-    const response = await axios.post<OpenRouterResponse>(
-      OPENROUTER_API_URL,
-      {
-        model: 'nvidia/llama-nemotron-rerank-vl-1b-v2:free',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert educational psychologist analyzing IQ test results.'
-          },
-          {
-            role: 'user',
-            content: `Analyze this student's performance:
+    return await callOpenRouter(
+      [
+        {
+          role: 'system',
+          content: 'You are a Student Performance Analysis Agent for an IQ assessment platform. Provide concise, supportive, and evidence-based feedback.',
+        },
+        {
+          role: 'user',
+          content: `Analyze this ${testType} IQ test performance:
 Class Level: ${classLevel}
-Correct Answers: ${correctCount} out of ${totalCount}
-Average Reaction Time: ${Math.round(avgReaction)}ms
+Student Age: ${studentAge || estimateAgeFromClass(classLevel)}
+Correct Answers: ${correctCount}
+Total Questions: ${totalCount}
+Accuracy: ${accuracy}%
+Average Reaction Time: ${avgReaction}ms
 
-Provide a brief analysis (3-4 paragraphs) including:
-1. IQ Score estimation based on performance
-2. Cognitive strengths and areas for improvement
-3. Specific recommendations for the student`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://dextest.app',
-          'X-Title': 'IQ Test Platform'
-        }
-      }
+Write a clear analysis with:
+1. Estimated reasoning band
+2. Cognitive strengths
+3. Areas to improve
+4. Practical next steps
+
+Keep the answer readable for a student and parent. Avoid overclaiming medical or clinical certainty.`,
+        },
+      ],
+      REPORT_MODEL,
+      1200,
+      0.6
     );
+  } catch (error: unknown) {
+    console.error('Error analyzing performance:', getErrorMessage(error));
 
-    return response.data.choices[0].message.content;
-  } catch (error: any) {
-    console.error('Error analyzing performance:', error.response?.data || error.message);
-    
-    // Fallback analysis
-    const correctCount = answers.filter(a => a.isCorrect).length;
-    const totalCount = answers.length;
-    const accuracy = Math.round((correctCount / totalCount) * 100);
-    const avgReaction = reactionTimes.length > 0 
-      ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
-      : 0;
+    return `Performance Summary
 
-    return `Performance Analysis:
+The student answered ${correctCount} out of ${totalCount} questions correctly, which is ${accuracy}% accuracy for a class ${classLevel} learner.
 
-You answered ${correctCount} out of ${totalCount} questions correctly (${accuracy}% accuracy).
+Average reaction time was ${avgReaction}ms. ${avgReaction > 0 && avgReaction <= 5000 ? 'This suggests quick processing on most questions.' : 'This suggests the student spent more time thinking through each answer.'}
 
-Your average reaction time was ${avgReaction}ms, which ${avgReaction < 5000 ? 'shows quick thinking and good cognitive speed' : 'suggests you took time to carefully consider each answer'}.
-
-${accuracy >= 80 ? 'Excellent performance! You demonstrate strong logical reasoning and problem-solving abilities.' : accuracy >= 60 ? 'Good performance! With practice, you can further improve your analytical skills.' : 'You show potential! Focus on practicing logical reasoning and pattern recognition exercises.'}
+Strengths:
+- ${accuracy >= 80 ? 'Strong reasoning and pattern recognition' : accuracy >= 60 ? 'A solid base in logical thinking' : 'Emerging reasoning ability that can improve with guided practice'}
+- ${avgReaction > 0 && avgReaction <= 5000 ? 'Good decision speed' : 'Careful and deliberate thinking'}
 
 Recommendations:
-- Continue practicing IQ test questions regularly
-- Work on improving your ${avgReaction > 6000 ? 'response speed while maintaining accuracy' : 'accuracy through careful analysis'}
-- Focus on ${accuracy < 60 ? 'understanding question patterns and logical reasoning' : 'challenging yourself with harder problems'}`;
+- Practice 10 to 15 minutes of logic and pattern questions daily
+- Review incorrect answers to learn the reasoning method
+- Focus on ${accuracy < 60 ? 'basic sequencing, analogies, and elimination strategies' : 'harder multi-step reasoning questions to build confidence'}`;
   }
 }
 
-/**
- * Generate comprehensive report from all test sessions in session storage
- */
-export async function generateComprehensiveReport(
-  allSessions: any[],
+export async function generateSessionStorageReport(
+  allSessions: TestSession[],
   studentClass: number,
-  studentName: string
+  studentName: string,
+  studentAge: number = 0
 ): Promise<string> {
+  if (allSessions.length === 0) {
+    return 'No test sessions found. Complete at least one test to generate a session report.';
+  }
+
+  const sessionSummaries = summarizeSessions(allSessions);
+  const totalSessions = allSessions.length;
+  const overallAccuracy = Math.round(
+    sessionSummaries.reduce((sum, session) => sum + session.accuracy, 0) / totalSessions
+  );
+  const averageReactionTime = Math.round(
+    sessionSummaries.reduce((sum, session) => sum + session.avgReaction, 0) / totalSessions
+  );
+
   try {
-    // Prepare session data summary
-    const sessionSummaries = allSessions.map((session, index) => {
-      const correctCount = session.results?.filter((r: any) => r.isCorrect).length || 0;
-      const totalCount = session.results?.length || 0;
-      const accuracy = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
-      const avgReaction = session.results && session.results.length > 0
-        ? Math.round(session.results.reduce((sum: number, r: any) => sum + r.reactionTime, 0) / session.results.length)
-        : 0;
+    return await callOpenRouter(
+      [
+        {
+          role: 'system',
+          content: 'You are a Session Report Agent. You review IQ test sessions saved in browser session storage and generate a polished student report for the UI.',
+        },
+        {
+          role: 'user',
+          content: `Create a complete IQ assessment report for this student:
+Name: ${studentName || 'Student'}
+Class: ${studentClass}
+Age: ${studentAge || estimateAgeFromClass(studentClass)}
+Total Sessions: ${totalSessions}
 
-      return {
-        sessionNumber: index + 1,
-        testType: session.testType,
-        accuracy,
-        correctCount,
-        totalCount,
-        avgReaction,
-        questions: session.questions?.map((q: any) => ({
-          question: q.question,
-          difficulty: q.difficulty,
-          answer: session.results?.find((r: any) => r.questionId === q.id)?.isCorrect ? 'Correct' : 'Incorrect'
-        })) || [],
-        gameScores: session.gameScores
-      };
-    });
-
-    const response = await axios.post<OpenRouterResponse>(
-      OPENROUTER_API_URL,
-      {
-        model: 'nvidia/llama-nemotron-rerank-vl-1b-v2:free',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert educational psychologist generating comprehensive IQ assessment reports for students.'
-          },
-          {
-            role: 'user',
-            content: `Generate a comprehensive IQ assessment report for ${studentName} (Class ${studentClass}).
-
-Test Sessions Data:
+Session storage data:
 ${JSON.stringify(sessionSummaries, null, 2)}
 
-Please provide a detailed report with:
-1. **Overall IQ Assessment** - Estimated IQ range based on all sessions
-2. **Performance Trends** - How performance changed across sessions
-3. **Cognitive Strengths** - Areas where the student excels
-4. **Areas for Improvement** - Specific weaknesses identified
-5. **Detailed Recommendations** - Actionable steps for improvement
-6. **Learning Style Analysis** - Based on performance patterns
+Generate a report with these sections:
+1. Overall Assessment
+2. Session-by-Session Trend
+3. Strengths
+4. Improvement Areas
+5. Learning Style Signals
+6. Recommended Practice Plan
 
-Format the report in a professional, easy-to-read manner with clear sections.`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://dextest.app',
-          'X-Title': 'IQ Test Platform'
-        }
-      }
+Keep the report professional, easy to read, and grounded only in the provided data.`,
+        },
+      ],
+      REPORT_MODEL,
+      2200,
+      0.65
     );
-
-    return response.data.choices[0].message.content;
-  } catch (error: any) {
-    console.error('Error generating comprehensive report:', error.response?.data || error.message);
-    
-    // Fallback comprehensive report
-    const totalSessions = allSessions.length;
-    const overallAccuracy = allSessions.reduce((sum, session) => {
-      const correct = session.results?.filter((r: any) => r.isCorrect).length || 0;
-      const total = session.results?.length || 0;
-      return sum + (total > 0 ? (correct / total) * 100 : 0);
-    }, 0) / totalSessions;
-
-    const avgReactionOverall = allSessions.reduce((sum, session) => {
-      const avgReaction = session.results && session.results.length > 0
-        ? session.results.reduce((s: number, r: any) => s + r.reactionTime, 0) / session.results.length
-        : 0;
-      return sum + avgReaction;
-    }, 0) / totalSessions;
+  } catch (error: unknown) {
+    console.error('Error generating session report:', getErrorMessage(error));
 
     return `COMPREHENSIVE IQ ASSESSMENT REPORT
-For: ${studentName} | Class ${studentClass}
+For: ${studentName || 'Student'} | Class ${studentClass} | Age ${studentAge || estimateAgeFromClass(studentClass)}
 Total Sessions Completed: ${totalSessions}
 
-═══════════════════════════════════════
+OVERALL ASSESSMENT
+Average Accuracy: ${overallAccuracy}%
+Average Reaction Time: ${averageReactionTime}ms
+Estimated Reasoning Band: ${overallAccuracy >= 80 ? 'Above Average' : overallAccuracy >= 60 ? 'Average to Strong Developing' : 'Developing'}
 
-📊 OVERALL PERFORMANCE SUMMARY
+SESSION-BY-SESSION TREND
+${sessionSummaries
+  .map(
+    (session) =>
+      `Session ${session.sessionNumber} (${session.testType}): ${session.correctCount}/${session.totalCount} correct, ${session.accuracy}% accuracy, ${session.avgReaction}ms average reaction`
+  )
+  .join('\n')}
 
-Average Accuracy: ${Math.round(overallAccuracy)}%
-Average Reaction Time: ${Math.round(avgReactionOverall)}ms
-Sessions Completed: ${totalSessions}
+STRENGTHS
+- ${overallAccuracy >= 75 ? 'Consistent logical performance across sessions' : 'Willingness to engage with multiple test formats'}
+- ${averageReactionTime > 0 && averageReactionTime <= 5000 ? 'Quick information processing' : 'Careful and reflective decision-making'}
 
-═══════════════════════════════════════
+IMPROVEMENT AREAS
+- ${overallAccuracy < 70 ? 'Build stronger foundations in patterns, analogies, and elimination strategy' : 'Push into more advanced multi-step reasoning tasks'}
+- ${averageReactionTime > 6000 ? 'Practice timed exercises to improve confidence and speed' : 'Slow down slightly on harder items to avoid avoidable mistakes'}
 
-🧠 IQ ASSESSMENT
+LEARNING STYLE SIGNALS
+- ${sessionSummaries.some((session) => session.testType === 'voice') ? 'The student has experience with oral question delivery.' : 'The student has mainly worked with non-oral formats so far.'}
+- ${sessionSummaries.some((session) => session.testType === 'game') ? 'Game sessions provide extra evidence about speed and attention.' : 'Adding game sessions could provide more attention and reaction-time evidence.'}
 
-Based on your performance across ${totalSessions} test session(s), your estimated IQ range is ${overallAccuracy >= 80 ? '115-125 (Above Average)' : overallAccuracy >= 60 ? '100-115 (Average)' : '85-100 (Average)'}.
-
-This assessment considers:
-- Accuracy in logical reasoning questions
-- Speed of information processing
-- Consistency across multiple test sessions
-- Pattern recognition abilities
-
-═══════════════════════════════════════
-
-💪 COGNITIVE STRENGTHS
-
-${overallAccuracy >= 70 ? '• Strong analytical thinking skills\n• Good pattern recognition abilities\n• Effective problem-solving approach' : '• Demonstrates potential for growth\n• Shows persistence in completing tests\n• Improving with practice'}
-
-${avgReactionOverall < 5000 ? '• Quick decision-making\n• Efficient cognitive processing\n• Good time management' : '• Careful and thorough approach\n• Takes time to analyze problems\n• Methodical thinking style'}
-
-═══════════════════════════════════════
-
-🎯 AREAS FOR IMPROVEMENT
-
-${overallAccuracy < 70 ? '• Practice more logical reasoning exercises\n• Work on pattern recognition skills\n• Focus on understanding question types' : '• Challenge yourself with harder problems\n• Work on speed while maintaining accuracy\n• Explore advanced reasoning topics'}
-
-${avgReactionOverall > 6000 ? '• Practice timed exercises\n• Work on quicker decision-making\n• Build confidence in your answers' : '• Consider double-checking answers\n• Balance speed with accuracy\n• Take time on difficult questions'}
-
-═══════════════════════════════════════
-
-📚 RECOMMENDATIONS
-
-1. **Daily Practice**: Spend 15-20 minutes daily on IQ puzzles
-2. **Focus Areas**: ${overallAccuracy < 60 ? 'Basic logical reasoning and patterns' : overallAccuracy < 80 ? 'Intermediate problem-solving and speed' : 'Advanced analytical thinking'}
-3. **Resources**: Use online IQ training platforms and puzzle books
-4. **Consistency**: Take regular practice tests to track improvement
-5. **Review**: Analyze incorrect answers to understand mistakes
-
-═══════════════════════════════════════
-
-📈 PROGRESS TRACKING
-
-Continue taking tests regularly to track your progress. Aim for:
-- ${overallAccuracy < 70 ? '70%+' : overallAccuracy < 85 ? '85%+' : '90%+'} accuracy in future tests
-- Faster response times (under ${avgReactionOverall > 5000 ? '5000ms' : '4000ms'})
-- Consistent performance across all question types
-
-═══════════════════════════════════════
-
-Keep up the excellent work and continue practicing!`;
+RECOMMENDED PRACTICE PLAN
+- Practice 3 to 4 times per week in short sessions
+- Review incorrect answers after each attempt
+- Mix text, voice, and game sessions for a more balanced profile
+- Track whether accuracy improves before pushing for faster speed`;
   }
+}
+
+export async function generateComprehensiveReport(
+  allSessions: TestSession[],
+  studentClass: number,
+  studentName: string,
+  studentAge: number = 0
+): Promise<string> {
+  return generateSessionStorageReport(allSessions, studentClass, studentName, studentAge);
 }

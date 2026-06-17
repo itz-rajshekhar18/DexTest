@@ -135,16 +135,18 @@ export function CinematicDomEffects() {
           );
         });
 
-        gsap.to(".ai-depth-card", {
-          yPercent: -3,
-          ease: "none",
-          scrollTrigger: {
-            trigger: document.body,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: 1.2,
-          },
-        });
+        if (cards.length > 0) {
+          gsap.to(cards, {
+            yPercent: -3,
+            ease: "none",
+            scrollTrigger: {
+              trigger: document.body,
+              start: "top top",
+              end: "bottom bottom",
+              scrub: 1.2,
+            },
+          });
+        }
       }
     });
 

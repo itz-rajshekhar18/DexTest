@@ -41,8 +41,13 @@ export default function LoginPage() {
 
       const userData = userDocSnap.data();
       
-      // Store student info in global state
-      setStudentInfo(cleanCode, parseInt(userData.class.match(/\d+/)[0]), userData.name);
+      // Store student info in global state, including age for adaptive AI agents.
+      setStudentInfo(
+        cleanCode,
+        parseInt(userData.class.match(/\d+/)[0], 10),
+        userData.name,
+        Number(userData.age) || 0
+      );
       
       // Navigate to test selection
       router.push('/test');
