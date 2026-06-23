@@ -1,12 +1,20 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Zap, Target, Brain, ArrowLeft } from 'lucide-react';
+import { Zap, Target, Brain, ArrowLeft, Lock, Activity, Sparkles } from 'lucide-react';
+import { getCompletedTests } from '@/lib/store';
+import { gameIQAgent } from '@/lib/aiAgents';
 
 export default function GameSelectionPage() {
   const router = useRouter();
+  const [isLocked, setIsLocked] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsLocked(getCompletedTests().game), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const games = [
     {
@@ -16,6 +24,7 @@ export default function GameSelectionPage() {
       icon: Zap,
       color: 'from-orange-500 to-red-500',
       route: '/test/games/temple-run',
+      signal: 'Spatial anticipation',
     },
     {
       id: 'reflex',
@@ -24,11 +33,12 @@ export default function GameSelectionPage() {
       icon: Target,
       color: 'from-purple-500 to-pink-500',
       route: '/test/games/reflex',
+      signal: 'Visual reaction speed',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-zinc-900 to-slate-950 text-white py-12 px-4">
+    <div className="ai-page-atmosphere min-h-screen text-white py-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Back Button */}
         <button
@@ -54,6 +64,15 @@ export default function GameSelectionPage() {
           <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
             Test your reflexes, reaction time, and spatial awareness through interactive 3D games
           </p>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-green-400/20 bg-green-400/10 px-4 py-2 text-sm text-green-200">
+            <Sparkles className="w-4 h-4" />
+            {gameIQAgent.name} measures reaction, spatial control, and sustained attention.
+          </div>
+          {isLocked && (
+            <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
+              Game-based test is already completed and locked for this browser session.
+            </div>
+          )}
         </motion.div>
 
         {/* Game Cards */}
@@ -64,9 +83,11 @@ export default function GameSelectionPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              whileHover={{ scale: 1.05, y: -10 }}
-              onClick={() => router.push(game.route)}
-              className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 rounded-3xl p-8 cursor-pointer transition-all relative overflow-hidden group"
+              whileHover={isLocked ? undefined : { scale: 1.05, y: -10 }}
+              onClick={() => !isLocked && router.push(game.route)}
+              className={`bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 rounded-3xl p-8 transition-all relative overflow-hidden group ${
+                isLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+              }`}
             >
               {/* Background Gradient */}
               <div className={`absolute inset-0 bg-gradient-to-br ${game.color} opacity-0 group-hover:opacity-20 transition-opacity`} />
@@ -74,16 +95,21 @@ export default function GameSelectionPage() {
               {/* Content */}
               <div className="relative z-10 text-center">
                 <div className="inline-flex items-center justify-center p-6 bg-zinc-800/50 rounded-full mb-4">
-                  <game.icon className="w-12 h-12 text-white" />
+                  {isLocked ? <Lock className="w-12 h-12 text-white" /> : <game.icon className="w-12 h-12 text-white" />}
                 </div>
 
                 <h3 className="text-2xl font-bold mb-3">{game.title}</h3>
                 <p className="text-zinc-400 mb-6">{game.description}</p>
+                <div className="mb-6 flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300">
+                  <Activity className="w-4 h-4 text-green-300" />
+                  {game.signal}
+                </div>
 
                 <button
-                  className={`w-full py-3 bg-gradient-to-r ${game.color} hover:opacity-90 text-white font-semibold rounded-xl transition-all`}
+                  disabled={isLocked}
+                  className={`w-full py-3 bg-gradient-to-r ${game.color} hover:opacity-90 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  Play Now
+                  {isLocked ? 'Locked' : 'Play Now'}
                 </button>
               </div>
             </motion.div>

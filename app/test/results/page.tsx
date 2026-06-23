@@ -1,58 +1,57 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Trophy, Brain, Clock, Target, TrendingUp, CheckCircle, XCircle, Home, Loader2, FileText } from 'lucide-react';
-import { getTestSessions, markTestCompleted, useTestStore } from '@/lib/store';
-import { analyzePerformance, generateComprehensiveReport } from '@/lib/openrouter';
+import { Trophy, Brain, Clock, Target, TrendingUp, CheckCircle, XCircle, Home, Loader2, FileText, Lock } from 'lucide-react';
+import { useTestStore, getCompletedTests, getLatestTestSession, getTestSessions, type TestType } from '@/lib/store';
+import { reportAgent } from '@/lib/aiAgents';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function ResultsPage() {
   const router = useRouter();
-  const hasInitialized = useRef(false);
-  const {
-    results,
-    gameScores,
-    studentCode,
-    studentClass,
-    studentName,
-    studentAge,
-    testType,
-    attentionScore,
-    saveCurrentSession,
-  } = useTestStore();
+  const { results, gameScores, studentCode, studentClass, studentName, attentionScore, saveCurrentSession, testType } = useTestStore();
   const [analysis, setAnalysis] = useState<string>('');
   const [comprehensiveReport, setComprehensiveReport] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showComprehensiveReport, setShowComprehensiveReport] = useState(false);
+  const [completedTests, setCompletedTests] = useState<Record<TestType, boolean>>({
+    text: false,
+    voice: false,
+    game: false,
+  });
 
-  const calculateScore = useCallback(() => {
-    if (results.length === 0) return 0;
-    const correctAnswers = results.filter(r => r.isCorrect).length;
-    const totalQuestions = results.length;
-    return Math.round((correctAnswers / totalQuestions) * 100);
-  }, [results]);
+  const allTestsCompleted = completedTests.text && completedTests.voice && completedTests.game;
 
-  const analyzeResults = useCallback(async () => {
+  const analyzeResults = async () => {
     try {
-      if (results.length === 0) {
+      const latestSession = getLatestTestSession(testType || undefined);
+
+      if (!latestSession) {
         setAnalysis('No test results available. Please complete a test first.');
         setLoading(false);
         return;
       }
 
+      const lockedTests = getCompletedTests();
+      setCompletedTests(lockedTests);
+
+      if (!lockedTests.text || !lockedTests.voice || !lockedTests.game) {
+        setAnalysis('AI report is locked until Text-Based, Voice-Based, and Game-Based tests are all completed in this browser session.');
+        setLoading(false);
+        return;
+      }
+
       const reactionTimes = results.map(r => r.reactionTime);
-      const performanceAnalysis = await analyzePerformance(
-        results,
-        reactionTimes,
+      const performanceAnalysis = await reportAgent.analyzeCurrentSession(
+        latestSession,
         studentClass,
-        studentAge,
-        testType || 'text'
+        studentName
       );
       setAnalysis(performanceAnalysis);
 
+      // Save results to Firestore
       if (studentCode) {
         const userDocRef = doc(db, 'users', studentCode);
         await updateDoc(userDocRef, {
@@ -61,7 +60,9 @@ export default function ResultsPage() {
             score: calculateScore(),
             correctAnswers: results.filter(r => r.isCorrect).length,
             totalQuestions: results.length,
-            avgReactionTime: reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length,
+            avgReactionTime: reactionTimes.length > 0
+              ? reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length
+              : 0,
             gameScores,
             attentionScore,
             analysis: performanceAnalysis,
@@ -74,35 +75,31 @@ export default function ResultsPage() {
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attentionScore, calculateScore, gameScores, results, studentAge, studentClass, studentCode, testType]);
+  };
 
-  useEffect(() => {
-    if (hasInitialized.current) {
-      return;
+  const calculateScore = () => {
+    if (results.length === 0) {
+      const gameScore =
+        (gameScores.templeRun?.score || 0) +
+        (gameScores.reflexGame?.score || 0) +
+        (gameScores.memoryGame?.score || 0);
+      return Math.min(100, gameScore);
     }
-
-    // Redirect if no results
-    if (results.length === 0 && !gameScores.templeRun && !gameScores.reflexGame && !gameScores.memoryGame) {
-      router.push('/test');
-      return;
-    }
-
-    hasInitialized.current = true;
-
-    // Save current session to session storage
-    saveCurrentSession();
-    if (testType) {
-      markTestCompleted(testType);
-    }
-
-    // Analyze results
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void analyzeResults();
-  }, [analyzeResults, gameScores.memoryGame, gameScores.reflexGame, gameScores.templeRun, results.length, router, saveCurrentSession, testType]);
+    const correctAnswers = results.filter(r => r.isCorrect).length;
+    const totalQuestions = results.length;
+    return Math.round((correctAnswers / totalQuestions) * 100);
+  };
 
   const calculateIQScore = () => {
-    if (results.length === 0) return 100;
+    if (results.length === 0) {
+      const gameScore = calculateScore();
+      const gameReaction =
+        gameScores.templeRun?.reactionTime ||
+        gameScores.reflexGame?.reactionTime ||
+        gameScores.memoryGame?.reactionTime ||
+        0;
+      return Math.round(Math.max(80, Math.min(135, 95 + gameScore * 0.25 - gameReaction / 900)));
+    }
     
     const baseScore = calculateScore();
     const avgReactionTime = results.reduce((sum, r) => sum + r.reactionTime, 0) / results.length;
@@ -117,17 +114,49 @@ export default function ResultsPage() {
     return isNaN(finalIQ) ? 100 : finalIQ;
   };
 
+  useEffect(() => {
+    const hasCurrentAttempt =
+      results.length > 0 ||
+      Boolean(gameScores.templeRun || gameScores.reflexGame || gameScores.memoryGame);
+    const hasStoredAttempt = getTestSessions().length > 0;
+
+    if (!hasCurrentAttempt && !hasStoredAttempt) {
+      router.push('/test');
+      return;
+    }
+
+    if (hasCurrentAttempt) {
+      saveCurrentSession();
+    }
+    const timer = window.setTimeout(() => {
+      setCompletedTests(getCompletedTests());
+      analyzeResults();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+    // Commit the just-finished session once when the results page opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleGenerateComprehensiveReport = async () => {
     setLoading(true);
     try {
       const allSessions = getTestSessions();
+      const lockedTests = getCompletedTests();
+      setCompletedTests(lockedTests);
+
+      if (!lockedTests.text || !lockedTests.voice || !lockedTests.game) {
+        setComprehensiveReport('Complete Text-Based, Voice-Based, and Game-Based tests to unlock the AI-generated report.');
+        setShowComprehensiveReport(true);
+        return;
+      }
 
       if (allSessions.length === 0) {
         setComprehensiveReport('No test sessions found. Complete at least one test to generate a comprehensive report.');
         return;
       }
 
-      const report = await generateComprehensiveReport(allSessions, studentClass, studentName, studentAge);
+      const report = await reportAgent.generateComprehensiveReport(allSessions, studentClass, studentName);
       setComprehensiveReport(report);
       setShowComprehensiveReport(true);
     } catch (error) {
@@ -141,10 +170,9 @@ export default function ResultsPage() {
   const avgReactionTime = results.length > 0
     ? Math.round(results.reduce((sum, r) => sum + r.reactionTime, 0) / results.length)
     : 0;
-  const sessionCount = getTestSessions().length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-zinc-900 to-slate-950 text-white py-12 px-4">
+    <div className="ai-page-atmosphere min-h-screen text-white py-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div
@@ -159,7 +187,7 @@ export default function ResultsPage() {
             Test Results
           </h1>
           <p className="text-zinc-400 text-lg">
-            {studentName} - Class {studentClass}{studentAge ? ` - Age ${studentAge}` : ''}
+            {studentName} - Class {studentClass}
           </p>
         </motion.div>
 
@@ -251,8 +279,12 @@ export default function ResultsPage() {
             className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 rounded-3xl p-8"
           >
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-              <Brain className="w-6 h-6 text-purple-400" />
-              Agent Analysis
+              {allTestsCompleted ? (
+                <Brain className="w-6 h-6 text-purple-400" />
+              ) : (
+                <Lock className="w-6 h-6 text-purple-400" />
+              )}
+              {allTestsCompleted ? 'AI Analysis' : 'AI Analysis Locked'}
             </h2>
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -306,11 +338,15 @@ export default function ResultsPage() {
         >
           <button
             onClick={handleGenerateComprehensiveReport}
-            disabled={loading && showComprehensiveReport}
+            disabled={!allTestsCompleted || (loading && showComprehensiveReport)}
             className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50"
           >
-            <FileText className="w-5 h-5" />
-            {showComprehensiveReport ? 'Regenerate Full Report' : 'Generate Comprehensive Report'}
+            {allTestsCompleted ? <FileText className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+            {allTestsCompleted
+              ? showComprehensiveReport
+                ? 'Regenerate Full Report'
+                : 'Generate Comprehensive Report'
+              : 'Complete All Tests to Unlock Report'}
           </button>
           <button
             onClick={() => router.push('/test')}
@@ -337,7 +373,7 @@ export default function ResultsPage() {
           >
             <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
               <FileText className="w-8 h-8 text-purple-400" />
-              Session Report Agent
+              Comprehensive Assessment Report
             </h2>
             <div className="bg-zinc-950/60 rounded-2xl p-6">
               {loading ? (
@@ -353,7 +389,7 @@ export default function ResultsPage() {
               )}
             </div>
             <p className="text-xs text-zinc-500 mt-4 text-center">
-              This report analyzes all test sessions stored in your browser session storage. Total sessions: {sessionCount}
+              This report analyzes all test sessions stored in your browser. Total sessions: {getTestSessions().length}
             </p>
           </motion.div>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useRef, useMemo, useCallback, useEffect } from "react";
+/* eslint-disable react-hooks/purity, react-hooks/immutability */
+import React, { useRef, useMemo, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, Stars } from "@react-three/drei";
 import {
@@ -333,8 +334,6 @@ function EnergyWave({
 
 /* ─────────────── Floating 3D Objects ─────────────── */
 function FloatingObjects({ tier }: { tier: PerformanceTier }) {
-  if (tier === "low") return null;
-
   const objects = useMemo(() => {
     const count = tier === "high" ? 6 : 3;
     return Array.from({ length: count }, (_, i) => ({
@@ -353,6 +352,8 @@ function FloatingObjects({ tier }: { tier: PerformanceTier }) {
       speed: 0.2 + Math.random() * 0.3,
     }));
   }, [tier]);
+
+  if (tier === "low") return null;
 
   return (
     <group>
@@ -499,30 +500,25 @@ function Scene({ tier }: { tier: PerformanceTier }) {
       {tier !== "low" && <AmbientOrbs />}
 
       {/* Post-processing */}
-      {tier === "high" ? (
+      {tier !== "low" && (
         <EffectComposer>
           <Bloom
             luminanceThreshold={0.2}
             luminanceSmoothing={0.9}
-            intensity={1.2}
+            intensity={tier === "high" ? 1.2 : 0.6}
           />
           <Vignette eskil={false} offset={0.1} darkness={0.8} />
           <ChromaticAberration
-            offset={new THREE.Vector2(0.0005, 0.0005)}
-            radialModulation={true}
+            offset={
+              tier === "high"
+                ? new THREE.Vector2(0.0005, 0.0005)
+                : new THREE.Vector2(0, 0)
+            }
+            radialModulation={tier === "high"}
             modulationOffset={0.5}
           />
         </EffectComposer>
-      ) : tier === "medium" ? (
-        <EffectComposer>
-          <Bloom
-            luminanceThreshold={0.2}
-            luminanceSmoothing={0.9}
-            intensity={0.6}
-          />
-          <Vignette eskil={false} offset={0.1} darkness={0.8} />
-        </EffectComposer>
-      ) : null}
+      )}
     </>
   );
 }

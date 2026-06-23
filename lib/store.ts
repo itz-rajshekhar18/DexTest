@@ -24,10 +24,10 @@ export interface TestSession {
   sessionId: string;
   testType: TestType;
   timestamp: Date;
-  studentCode: string;
-  studentName: string;
-  studentClass: number;
-  studentAge: number;
+  studentCode?: string;
+  studentName?: string;
+  studentClass?: number;
+  studentAge?: number;
   questions: Question[];
   results: TestResult[];
   gameScores?: {
@@ -37,18 +37,23 @@ export interface TestSession {
   };
 }
 
-// Session storage helper functions
-const COMPLETED_TESTS_KEY = 'completedTestTypes';
+const TEST_SESSIONS_KEY = 'testSessions';
+const COMPLETED_TESTS_KEY = 'completedTests';
 
+const canUseSessionStorage = () =>
+  typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+
+// Session storage helper functions
 export const saveTestSession = (session: TestSession) => {
   try {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
+    if (!canUseSessionStorage()) return;
     const existingSessions = getTestSessions();
-    existingSessions.push(session);
-    sessionStorage.setItem('testSessions', JSON.stringify(existingSessions));
+    const nextSessions = [
+      ...existingSessions.filter((existingSession) => existingSession.testType !== session.testType),
+      session,
+    ];
+    sessionStorage.setItem(TEST_SESSIONS_KEY, JSON.stringify(nextSessions));
+    markTestCompleted(session.testType);
   } catch (error) {
     console.error('Error saving test session:', error);
   }
@@ -56,11 +61,8 @@ export const saveTestSession = (session: TestSession) => {
 
 export const getTestSessions = (): TestSession[] => {
   try {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-
-    const sessions = sessionStorage.getItem('testSessions');
+    if (!canUseSessionStorage()) return [];
+    const sessions = sessionStorage.getItem(TEST_SESSIONS_KEY);
     return sessions ? JSON.parse(sessions) : [];
   } catch (error) {
     console.error('Error getting test sessions:', error);
@@ -68,48 +70,58 @@ export const getTestSessions = (): TestSession[] => {
   }
 };
 
-export const clearTestSessions = () => {
+export const getLatestTestSession = (testType?: TestType): TestSession | null => {
+  const sessions = getTestSessions();
+  const filteredSessions = testType
+    ? sessions.filter((session) => session.testType === testType)
+    : sessions;
+
+  return filteredSessions[filteredSessions.length - 1] || null;
+};
+
+export const getCompletedTests = (): Record<TestType, boolean> => {
   try {
-    if (typeof window === 'undefined') {
-      return;
+    if (!canUseSessionStorage()) {
+      return { text: false, voice: false, game: false };
     }
 
-    sessionStorage.removeItem('testSessions');
+    const completed = sessionStorage.getItem(COMPLETED_TESTS_KEY);
+    return {
+      text: false,
+      voice: false,
+      game: false,
+      ...(completed ? JSON.parse(completed) : {}),
+    };
   } catch (error) {
-    console.error('Error clearing test sessions:', error);
+    console.error('Error getting completed tests:', error);
+    return { text: false, voice: false, game: false };
   }
 };
 
-export const getCompletedTestTypes = (): TestType[] => {
-  try {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-
-    const completedTypes = sessionStorage.getItem(COMPLETED_TESTS_KEY);
-    return completedTypes ? JSON.parse(completedTypes) : [];
-  } catch (error) {
-    console.error('Error getting completed test types:', error);
-    return [];
-  }
+export const isTestCompleted = (testType: TestType): boolean => {
+  return Boolean(getCompletedTests()[testType]);
 };
 
 export const markTestCompleted = (testType: TestType) => {
   try {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const completedTypes = getCompletedTestTypes();
-
-    if (!completedTypes.includes(testType)) {
-      sessionStorage.setItem(
-        COMPLETED_TESTS_KEY,
-        JSON.stringify([...completedTypes, testType])
-      );
-    }
+    if (!canUseSessionStorage()) return;
+    const completed = getCompletedTests();
+    sessionStorage.setItem(
+      COMPLETED_TESTS_KEY,
+      JSON.stringify({ ...completed, [testType]: true })
+    );
   } catch (error) {
-    console.error('Error marking test as completed:', error);
+    console.error('Error locking completed test:', error);
+  }
+};
+
+export const clearTestSessions = () => {
+  try {
+    if (!canUseSessionStorage()) return;
+    sessionStorage.removeItem(TEST_SESSIONS_KEY);
+    sessionStorage.removeItem(COMPLETED_TESTS_KEY);
+  } catch (error) {
+    console.error('Error clearing test sessions:', error);
   }
 };
 
@@ -172,7 +184,8 @@ export const useTestStore = create<TestState>((set) => ({
   setStudentInfo: (code, classLevel, name, age = 0) =>
     set({ studentCode: code, studentClass: classLevel, studentName: name, studentAge: age }),
   
-  setTestType: (type) => set({ testType: type }),
+  setTestType: (type) =>
+    set({ testType: type }),
   
   setQuestions: (questions) =>
     set({ questions, currentQuestionIndex: 0 }),
@@ -213,7 +226,13 @@ export const useTestStore = create<TestState>((set) => ({
   
   saveCurrentSession: () =>
     set((state) => {
-      if (state.testType && (state.results.length > 0 || state.gameScores.templeRun || state.gameScores.reflexGame)) {
+      const hasGameScore = Boolean(
+        state.gameScores.templeRun ||
+        state.gameScores.reflexGame ||
+        state.gameScores.memoryGame
+      );
+
+      if (state.testType && (state.results.length > 0 || hasGameScore)) {
         const session: TestSession = {
           sessionId: `session-${Date.now()}`,
           testType: state.testType,
