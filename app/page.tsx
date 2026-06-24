@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { 
   User, 
   Mail, 
@@ -15,7 +17,6 @@ import {
   Copy, 
   Check, 
   ArrowRight,
-  ShieldCheck
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -27,6 +28,7 @@ export default function SignupPage() {
     fatherName: "",
     motherName: "",
     age: "",
+    gender: "",
     classVal: "",
     phone: "",
     signupCode: ""
@@ -61,6 +63,9 @@ export default function SignupPage() {
         if (isNaN(ageNum) || ageNum < 5 || ageNum > 100) {
           error = "Please enter a valid age between 5 and 100.";
         }
+        break;
+      case "gender":
+        if (!value) error = "Please select your gender.";
         break;
       case "classVal":
         if (!value) error = "Please select your class.";
@@ -135,6 +140,7 @@ export default function SignupPage() {
         fatherName: formData.fatherName.trim(),
         motherName: formData.motherName.trim(),
         age: parseInt(formData.age, 10),
+        gender: formData.gender,
         class: formData.classVal,
         phone: formData.phone.trim(),
         signupCode: cleanCode,
@@ -142,9 +148,9 @@ export default function SignupPage() {
       });
 
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Firebase Error: ", err);
-      setSubmitError(err.message || "An unexpected error occurred. Please try again.");
+      setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -163,6 +169,7 @@ export default function SignupPage() {
       fatherName: "",
       motherName: "",
       age: "",
+      gender: "",
       classVal: "",
       phone: "",
       signupCode: ""
@@ -203,8 +210,15 @@ export default function SignupPage() {
           <div>
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4 text-indigo-400">
-                <ShieldCheck className="w-8 h-8" />
+              <div className="inline-flex items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-slate-950 p-1.5 shadow-[0_0_45px_rgba(34,211,238,0.18)] mb-4">
+                <Image
+                  src="/dextest-logo-dark.png"
+                  alt="DexTest"
+                  width={260}
+                  height={146}
+                  priority
+                  className="h-16 w-auto rounded-xl object-contain"
+                />
               </div>
               <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl bg-gradient-to-r from-indigo-200 via-white to-indigo-200 bg-clip-text text-transparent">
                 Student Registration
@@ -287,7 +301,7 @@ export default function SignupPage() {
                 {/* Father's Name */}
                 <div className="space-y-1.5">
                   <label htmlFor="fatherName" className="text-xs font-semibold tracking-wider uppercase text-zinc-400">
-                    Father's Name
+                    Father&apos;s Name
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
@@ -298,7 +312,7 @@ export default function SignupPage() {
                       name="fatherName"
                       type="text"
                       required
-                      placeholder="Father's Full Name"
+                      placeholder="Father&apos;s Full Name"
                       value={formData.fatherName}
                       onChange={handleInputChange}
                       onBlur={handleBlur}
@@ -315,7 +329,7 @@ export default function SignupPage() {
                 {/* Mother's Name */}
                 <div className="space-y-1.5">
                   <label htmlFor="motherName" className="text-xs font-semibold tracking-wider uppercase text-zinc-400">
-                    Mother's Name
+                    Mother&apos;s Name
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
@@ -364,6 +378,43 @@ export default function SignupPage() {
                   {errors.age && (
                     <p className="text-xs text-red-400 font-medium flex items-center gap-1 mt-1">
                       <AlertCircle className="w-3.5 h-3.5" /> {errors.age}
+                    </p>
+                  )}
+                </div>
+
+                {/* Class Select */}
+                <div className="space-y-1.5">
+                  <label htmlFor="gender" className="text-xs font-semibold tracking-wider uppercase text-zinc-400">
+                    Gender
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <select
+                      id="gender"
+                      name="gender"
+                      required
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      className={`w-full pl-11 pr-10 py-3 bg-zinc-950/40 border ${errors.gender ? 'border-red-500/80 focus:border-red-500' : 'border-zinc-800 focus:border-indigo-500'} rounded-xl text-white appearance-none focus:outline-hidden focus:ring-2 ${errors.gender ? 'focus:ring-red-500/20' : 'focus:ring-indigo-500/20'} transition duration-200`}
+                    >
+                      <option value="" className="bg-zinc-900 text-white">Select gender</option>
+                      <option value="Female" className="bg-zinc-900 text-white">Female</option>
+                      <option value="Male" className="bg-zinc-900 text-white">Male</option>
+                      <option value="Other" className="bg-zinc-900 text-white">Other</option>
+                      <option value="Prefer not to say" className="bg-zinc-900 text-white">Prefer not to say</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-zinc-500">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  {errors.gender && (
+                    <p className="text-xs text-red-400 font-medium flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.gender}
                     </p>
                   )}
                 </div>
@@ -558,16 +609,20 @@ export default function SignupPage() {
                   <span className="font-semibold text-white break-all">{formData.email}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-500 block text-xs">Father's Name</span>
+                  <span className="text-zinc-500 block text-xs">Father&apos;s Name</span>
                   <span className="font-semibold text-white">{formData.fatherName}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-500 block text-xs">Mother's Name</span>
+                  <span className="text-zinc-500 block text-xs">Mother&apos;s Name</span>
                   <span className="font-semibold text-white">{formData.motherName}</span>
                 </div>
                 <div>
                   <span className="text-zinc-500 block text-xs">Age</span>
                   <span className="font-semibold text-white">{formData.age}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-xs">Gender</span>
+                  <span className="font-semibold text-white">{formData.gender}</span>
                 </div>
                 <div>
                   <span className="text-zinc-500 block text-xs">Class / Grade</span>
@@ -596,9 +651,9 @@ export default function SignupPage() {
       <div className="text-center mt-8">
         <p className="text-zinc-500 text-sm">
           Already registered?{' '}
-          <a href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+          <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
             Login to take test
-          </a>
+          </Link>
         </p>
       </div>
     </div>

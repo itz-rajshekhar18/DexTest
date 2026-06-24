@@ -1,12 +1,28 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { MessageSquare, Mic, Gamepad2, Brain, ArrowRight, Loader2, Lock } from 'lucide-react';
-import { getCompletedTests, getLatestTestSession, type TestType, useTestStore } from '@/lib/store';
+import { MessageSquare, Mic, Gamepad2, ArrowRight, Loader2, Lock, Trophy, FileText } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import {
+  getCompletedTests,
+  getLatestTestSession,
+  getStudentProfile,
+  getTestSessions,
+  type StudentProfile,
+  type TestType,
+  useTestStore,
+} from '@/lib/store';
 import { voiceIQAgent, writtenIQAgent } from '@/lib/aiAgents';
 import CameraMonitor from '@/components/camera/CameraMonitor';
+
+function parseClassLevel(classValue: unknown) {
+  const match = String(classValue || '').match(/\d+/);
+  return match ? Number(match[0]) : 10;
+}
 
 export default function TestSelectionPage() {
   const router = useRouter();
@@ -17,7 +33,18 @@ export default function TestSelectionPage() {
     voice: false,
     game: false,
   });
-  const { studentAge, studentClass, setTestType, setQuestions, resetTest } = useTestStore();
+  const allTestsCompleted = completedTests.text && completedTests.voice && completedTests.game;
+  const {
+    studentAge,
+    studentClass,
+    studentCode,
+    studentGender,
+    studentName,
+    setStudentInfo,
+    setTestType,
+    setQuestions,
+    resetTest,
+  } = useTestStore();
 
   useEffect(() => {
     const timer = window.setTimeout(() => setCompletedTests(getCompletedTests()), 0);
@@ -57,8 +84,63 @@ export default function TestSelectionPage() {
     },
   ];
 
+  const resolveStudentProfile = async (): Promise<StudentProfile> => {
+    const cachedProfile = getStudentProfile();
+    const code = studentCode || cachedProfile?.studentCode || '';
+
+    if (code) {
+      try {
+        const userDocSnap = await getDoc(doc(db, 'users', code));
+
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          const profile = {
+            studentCode: code,
+            studentClass: parseClassLevel(userData.class),
+            studentName: String(userData.name || cachedProfile?.studentName || studentName || 'Student'),
+            studentAge: Number(userData.age || cachedProfile?.studentAge || studentAge || 0),
+            studentGender: String(userData.gender || userData.sex || cachedProfile?.studentGender || studentGender || ''),
+          };
+
+          setStudentInfo(
+            profile.studentCode,
+            profile.studentClass,
+            profile.studentName,
+            profile.studentAge,
+            profile.studentGender
+          );
+
+          return profile;
+        }
+      } catch (error) {
+        console.warn('Could not refresh student profile from Firestore:', error);
+      }
+    }
+
+    return {
+      studentCode: code,
+      studentClass: studentClass || cachedProfile?.studentClass || 10,
+      studentName: studentName || cachedProfile?.studentName || 'Student',
+      studentAge: studentAge || cachedProfile?.studentAge || 0,
+      studentGender: studentGender || cachedProfile?.studentGender || '',
+    };
+  };
+
+  const getPreviousQuestionTexts = (testType?: TestType) => {
+    return getTestSessions()
+      .filter((session) => !testType || session.testType === testType)
+      .flatMap((session) => session.questions || [])
+      .map((question) => question.question)
+      .filter(Boolean);
+  };
+
   const handleStartTest = async (type: 'text' | 'voice' | 'game') => {
-    if (completedTests[type]) return;
+    if (completedTests[type]) {
+      if (allTestsCompleted) {
+        router.push('/test/results');
+      }
+      return;
+    }
 
     setLoading(true);
     setSelectedType(type);
@@ -66,17 +148,35 @@ export default function TestSelectionPage() {
     setTestType(type);
 
     try {
+      const profile = await resolveStudentProfile();
+
       if (type === 'text') {
+        // This seed must be new on each user-started attempt to prevent repeated AI questions.
+        // eslint-disable-next-line react-hooks/purity
+        const uniquenessSeed = `text-${profile.studentCode || 'guest'}-${Date.now()}-${crypto.randomUUID()}`;
         const questions = await writtenIQAgent.generateTest({
-          classLevel: studentClass || 10,
+          classLevel: profile.studentClass,
           questionType: 'logical',
           count: 10,
-          studentAge,
+          studentAge: profile.studentAge,
+          studentGender: profile.studentGender,
+          previousQuestions: getPreviousQuestionTexts('text'),
+          uniquenessSeed,
         });
         setQuestions(questions);
         router.push('/test/text-test');
       } else if (type === 'voice') {
-        const questions = await voiceIQAgent.generateVoiceQuestions(studentClass || 10, 10, studentAge);
+        // This seed must be new on each user-started attempt to prevent repeated AI questions.
+        // eslint-disable-next-line react-hooks/purity
+        const uniquenessSeed = `voice-${profile.studentCode || 'guest'}-${Date.now()}-${crypto.randomUUID()}`;
+        const questions = await voiceIQAgent.generateVoiceQuestions(
+          profile.studentClass,
+          10,
+          profile.studentAge,
+          profile.studentGender,
+          getPreviousQuestionTexts('voice'),
+          uniquenessSeed
+        );
         setQuestions(questions);
         router.push('/test/voice-test');
       } else {
@@ -101,8 +201,15 @@ export default function TestSelectionPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4">
-            <Brain className="w-12 h-12 text-indigo-400" />
+          <div className="inline-flex items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-slate-950 p-1.5 shadow-[0_0_45px_rgba(34,211,238,0.18)] mb-4">
+            <Image
+              src="/dextest-logo-dark.png"
+              alt="DexTest"
+              width={260}
+              height={146}
+              priority
+              className="h-16 w-auto rounded-xl object-contain"
+            />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-indigo-200 via-white to-purple-200 bg-clip-text text-transparent">
             Choose Your Test Type
@@ -111,6 +218,43 @@ export default function TestSelectionPage() {
             Select how you&apos;d like to take your IQ assessment. Each method tests different cognitive abilities.
           </p>
         </motion.div>
+
+        {allTestsCompleted && (
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-10 overflow-hidden rounded-3xl border border-cyan-300/30 bg-gradient-to-br from-cyan-500/12 via-indigo-500/10 to-purple-500/12 shadow-[0_0_55px_rgba(34,211,238,0.12)] backdrop-blur-xl"
+          >
+            <div className="grid gap-0 md:grid-cols-[1.2fr_auto]">
+              <div className="p-7">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-3">
+                    <Trophy className="h-7 w-7 text-cyan-200" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/80">Assessment Complete</p>
+                    <h2 className="text-2xl font-bold text-white">All tests are locked</h2>
+                  </div>
+                </div>
+                <p className="max-w-2xl text-sm leading-relaxed text-zinc-300">
+                  Text-Based, Voice-Based, and Game-Based assessments are complete. Open the results page to view
+                  your AI report, scholarship score, and PDF download option.
+                </p>
+              </div>
+              <div className="flex items-center border-t border-white/10 bg-black/20 p-7 md:border-l md:border-t-0">
+                <button
+                  onClick={() => router.push('/test/results')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-7 py-3 font-semibold text-white transition hover:opacity-90 md:w-auto"
+                >
+                  <FileText className="h-5 w-5" />
+                  View Results
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Test Type Cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-12">
@@ -128,7 +272,7 @@ export default function TestSelectionPage() {
                 transition={{ delay: index * 0.1 }}
                 whileHover={locked ? undefined : { scale: 1.02, y: -5 }}
                 className={`bg-zinc-900/60 backdrop-blur-xl border ${test.borderColor} rounded-3xl p-8 transition-all relative overflow-hidden group ${
-                  locked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+                  locked && !allTestsCompleted ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
                 }`}
                 onClick={() => !loading && handleStartTest(test.id)}
               >
@@ -154,13 +298,13 @@ export default function TestSelectionPage() {
                   </div>
 
                   <button
-                    disabled={loading || locked}
+                    disabled={loading || (locked && !allTestsCompleted)}
                     className={`w-full py-3 bg-gradient-to-r ${test.color} hover:opacity-90 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {locked ? (
                       <>
-                        <Lock className="w-5 h-5" />
-                        Locked
+                        {allTestsCompleted ? <FileText className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+                        {allTestsCompleted ? 'View Results' : 'Locked'}
                       </>
                     ) : loading && selectedType === test.id ? (
                       <>

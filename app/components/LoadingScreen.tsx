@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 
 interface LoadingScreenProps {
@@ -62,10 +63,9 @@ export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
       active: boolean;
     }[] = [];
 
-    let animProgress = 0;
     let animFrame: number;
 
-    function drawFrame(time: number) {
+    function drawFrame() {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -268,19 +268,20 @@ export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
       <div className="relative z-10 flex flex-col items-center gap-4">
         <div
           ref={logoRef}
-          className="text-4xl sm:text-5xl font-extrabold tracking-tight"
+          className="overflow-hidden rounded-[1.75rem] border border-indigo-300/25 bg-slate-950 p-2 shadow-[0_0_70px_rgba(99,102,241,0.24)]"
           style={{
             opacity: 0,
             transform: "translateY(20px)",
-            background:
-              "linear-gradient(135deg, #818cf8 0%, #c4b5fd 30%, #e0e7ff 50%, #818cf8 70%, #6366f1 100%)",
-            backgroundSize: "200% 200%",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            animation: "shimmer 3s ease-in-out infinite",
           }}
         >
-          DexTest
+          <Image
+            src="/dextest-logo-dark.png"
+            alt="DexTest"
+            width={420}
+            height={236}
+            priority
+            className="h-24 w-auto rounded-[1.35rem] object-contain sm:h-28"
+          />
         </div>
 
         <div

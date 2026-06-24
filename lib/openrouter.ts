@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Question, TestResult, TestSession } from './store';
 
-const IQ_MODEL = process.env.NEXT_PUBLIC_IQ_MODEL || 'google/gemini-3.5-flash';
+const IQ_MODEL = process.env.NEXT_PUBLIC_IQ_MODEL || 'openrouter/auto';
 const REPORT_MODEL = process.env.NEXT_PUBLIC_REPORT_MODEL || IQ_MODEL;
 const TTS_MODEL = process.env.NEXT_PUBLIC_TTS_MODEL || 'google/gemini-flash-1.5-8b';
 const QUESTION_BATCH_SIZE = 1;

@@ -3,11 +3,55 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Trophy, Brain, Clock, Target, TrendingUp, CheckCircle, XCircle, Home, Loader2, FileText, Lock } from 'lucide-react';
-import { useTestStore, getCompletedTests, getLatestTestSession, getTestSessions, type TestType } from '@/lib/store';
+import { Trophy, Brain, Clock, Target, TrendingUp, CheckCircle, XCircle, Home, Loader2, FileText, Lock, Download } from 'lucide-react';
+import { useTestStore, getAssessmentSnapshot, getCompletedTests, getLatestTestSession, getSessionMetrics, getTestSessions, type TestType } from '@/lib/store';
 import { reportAgent } from '@/lib/aiAgents';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+
+type ScholarshipSession = ReturnType<typeof getTestSessions>[number];
+
+function getLatestSessionsByType(sessions: ScholarshipSession[]) {
+  return sessions.reduce<Partial<Record<TestType, ScholarshipSession>>>((latest, session) => {
+    latest[session.testType] = session;
+    return latest;
+  }, {});
+}
+
+function getQuestionPercent(session?: ScholarshipSession) {
+  const sessionResults = session?.results || [];
+  if (sessionResults.length === 0) return 0;
+
+  const correct = sessionResults.filter((result) => result.isCorrect).length;
+  return Math.round((correct / sessionResults.length) * 100);
+}
+
+function getGamePercent(session?: ScholarshipSession) {
+  if (!session?.gameScores) return 0;
+
+  const scoreTotal =
+    (session.gameScores.templeRun?.score || 0) +
+    (session.gameScores.reflexGame?.score || 0) +
+    (session.gameScores.memoryGame?.score || 0);
+
+  return Math.max(0, Math.min(100, Math.round(scoreTotal)));
+}
+
+function getScholarshipSummary(sessions: ScholarshipSession[]) {
+  const latest = getLatestSessionsByType(sessions);
+  const textScore = getQuestionPercent(latest.text);
+  const voiceScore = getQuestionPercent(latest.voice);
+  const gameScore = getGamePercent(latest.game);
+  const totalPercentage = Math.round((textScore + voiceScore + gameScore) / 3);
+
+  return {
+    textScore,
+    voiceScore,
+    gameScore,
+    totalPercentage,
+    eligible: totalPercentage > 30,
+  };
+}
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -15,6 +59,7 @@ export default function ResultsPage() {
   const [analysis, setAnalysis] = useState<string>('');
   const [comprehensiveReport, setComprehensiveReport] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showComprehensiveReport, setShowComprehensiveReport] = useState(false);
   const [completedTests, setCompletedTests] = useState<Record<TestType, boolean>>({
     text: false,
@@ -23,11 +68,37 @@ export default function ResultsPage() {
   });
 
   const allTestsCompleted = completedTests.text && completedTests.voice && completedTests.game;
+  const storedSessions = getTestSessions();
+  const latestSession =
+    getLatestTestSession(testType || undefined) ||
+    getLatestTestSession();
+  const currentGameScores = {
+    ...(gameScores.templeRun ? { templeRun: gameScores.templeRun } : {}),
+    ...(gameScores.reflexGame ? { reflexGame: gameScores.reflexGame } : {}),
+    ...(gameScores.memoryGame ? { memoryGame: gameScores.memoryGame } : {}),
+  };
+  const hasCurrentAttempt =
+    results.length > 0 ||
+    Boolean(gameScores.templeRun || gameScores.reflexGame || gameScores.memoryGame);
+  const activeSession = hasCurrentAttempt
+    ? {
+        sessionId: 'current-attempt',
+        testType: testType || latestSession?.testType || 'text',
+        timestamp: new Date(),
+        questions: latestSession?.questions || [],
+        results,
+        gameScores: currentGameScores,
+        attentionScore,
+      }
+    : latestSession;
+  const displayResults = activeSession?.results || [];
+  const displayGameScores = activeSession?.gameScores || {};
+  const activeMetrics = getSessionMetrics(activeSession || undefined);
+  const assessmentSnapshot = getAssessmentSnapshot(storedSessions);
+  const scholarshipSummary = getScholarshipSummary(storedSessions);
 
   const analyzeResults = async () => {
     try {
-      const latestSession = getLatestTestSession(testType || undefined);
-
       if (!latestSession) {
         setAnalysis('No test results available. Please complete a test first.');
         setLoading(false);
@@ -43,7 +114,6 @@ export default function ResultsPage() {
         return;
       }
 
-      const reactionTimes = results.map(r => r.reactionTime);
       const performanceAnalysis = await reportAgent.analyzeCurrentSession(
         latestSession,
         studentClass,
@@ -57,14 +127,12 @@ export default function ResultsPage() {
         await updateDoc(userDocRef, {
           lastTestDate: serverTimestamp(),
           lastTestResults: {
-            score: calculateScore(),
-            correctAnswers: results.filter(r => r.isCorrect).length,
-            totalQuestions: results.length,
-            avgReactionTime: reactionTimes.length > 0
-              ? reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length
-              : 0,
-            gameScores,
-            attentionScore,
+            score: assessmentSnapshot.accuracy,
+            correctAnswers: displayResults.filter(r => r.isCorrect).length,
+            totalQuestions: displayResults.length,
+            avgReactionTime: assessmentSnapshot.averageReactionTime,
+            gameScores: displayGameScores,
+            attentionScore: activeSession?.attentionScore ?? assessmentSnapshot.attentionScore,
             analysis: performanceAnalysis,
           },
         });
@@ -78,47 +146,15 @@ export default function ResultsPage() {
   };
 
   const calculateScore = () => {
-    if (results.length === 0) {
-      const gameScore =
-        (gameScores.templeRun?.score || 0) +
-        (gameScores.reflexGame?.score || 0) +
-        (gameScores.memoryGame?.score || 0);
-      return Math.min(100, gameScore);
-    }
-    const correctAnswers = results.filter(r => r.isCorrect).length;
-    const totalQuestions = results.length;
-    return Math.round((correctAnswers / totalQuestions) * 100);
+    return activeMetrics.accuracy;
   };
 
   const calculateIQScore = () => {
-    if (results.length === 0) {
-      const gameScore = calculateScore();
-      const gameReaction =
-        gameScores.templeRun?.reactionTime ||
-        gameScores.reflexGame?.reactionTime ||
-        gameScores.memoryGame?.reactionTime ||
-        0;
-      return Math.round(Math.max(80, Math.min(135, 95 + gameScore * 0.25 - gameReaction / 900)));
-    }
-    
-    const baseScore = calculateScore();
-    const avgReactionTime = results.reduce((sum, r) => sum + r.reactionTime, 0) / results.length;
-    
-    // IQ calculation (simplified)
-    // Base IQ: 100, adjust based on score and reaction time
-    let iq = 100;
-    iq += (baseScore - 50) * 0.5; // ±25 points based on accuracy
-    iq -= (avgReactionTime - 5000) / 1000; // Adjust for reaction time
-    
-    const finalIQ = Math.round(Math.max(70, Math.min(150, iq)));
-    return isNaN(finalIQ) ? 100 : finalIQ;
+    return assessmentSnapshot.estimatedIQ;
   };
 
   useEffect(() => {
-    const hasCurrentAttempt =
-      results.length > 0 ||
-      Boolean(gameScores.templeRun || gameScores.reflexGame || gameScores.memoryGame);
-    const hasStoredAttempt = getTestSessions().length > 0;
+    const hasStoredAttempt = storedSessions.length > 0;
 
     if (!hasCurrentAttempt && !hasStoredAttempt) {
       router.push('/test');
@@ -167,9 +203,50 @@ export default function ResultsPage() {
     }
   };
 
-  const avgReactionTime = results.length > 0
-    ? Math.round(results.reduce((sum, r) => sum + r.reactionTime, 0) / results.length)
-    : 0;
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+
+    try {
+      const response = await fetch('/api/reports/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName,
+          studentClass,
+          iqScore: calculateIQScore(),
+          score: calculateScore(),
+          avgReactionTime,
+          attentionScore: activeSession?.attentionScore ?? assessmentSnapshot.attentionScore,
+          analysis,
+          comprehensiveReport: showComprehensiveReport ? comprehensiveReport : '',
+          sessions: storedSessions,
+          scholarship: scholarshipSummary,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('PDF generation failed.');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeName = (studentName || 'student').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+      link.href = url;
+      link.download = `dextest-report-${safeName || 'student'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Unable to generate the PDF right now. Please try again.');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const avgReactionTime = assessmentSnapshot.averageReactionTime;
 
   return (
     <div className="ai-page-atmosphere min-h-screen text-white py-12 px-4">
@@ -212,7 +289,7 @@ export default function ResultsPage() {
           >
             <CheckCircle className="w-10 h-10 text-green-400 mb-3" />
             <p className="text-sm text-zinc-400 mb-1">Accuracy</p>
-            <p className="text-4xl font-bold text-white">{calculateScore()}%</p>
+            <p className="text-4xl font-bold text-white">{assessmentSnapshot.accuracy}%</p>
           </motion.div>
 
           <motion.div
@@ -234,9 +311,69 @@ export default function ResultsPage() {
           >
             <Target className="w-10 h-10 text-yellow-400 mb-3" />
             <p className="text-sm text-zinc-400 mb-1">Attention</p>
-            <p className="text-4xl font-bold text-white">{attentionScore}%</p>
+            <p className="text-4xl font-bold text-white">{activeSession?.attentionScore ?? assessmentSnapshot.attentionScore}%</p>
           </motion.div>
         </div>
+
+        {/* Scholarship Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className={`mb-12 overflow-hidden rounded-3xl border backdrop-blur-xl ${
+            scholarshipSummary.eligible
+              ? 'border-emerald-400/40 bg-emerald-500/10'
+              : 'border-rose-400/40 bg-rose-500/10'
+          }`}
+        >
+          <div className="grid gap-0 md:grid-cols-[1.15fr_1fr]">
+            <div className="p-7">
+              <div className="mb-2 flex items-center gap-3">
+                <Trophy
+                  className={`h-7 w-7 ${
+                    scholarshipSummary.eligible ? 'text-emerald-300' : 'text-rose-300'
+                  }`}
+                />
+                <h2 className="text-2xl font-bold">Scholarship Eligibility</h2>
+              </div>
+              <p className="text-sm leading-relaxed text-zinc-300">
+                Total score is calculated from all three test formats: text, voice, and game. Students scoring
+                greater than 30% are eligible for scholarship consideration.
+              </p>
+            </div>
+            <div className="border-t border-white/10 bg-black/20 p-7 md:border-l md:border-t-0">
+              <div className="mb-4 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Total Score</p>
+                  <p className="text-5xl font-extrabold text-white">{scholarshipSummary.totalPercentage}%</p>
+                </div>
+                <span
+                  className={`rounded-full px-4 py-2 text-sm font-bold ${
+                    scholarshipSummary.eligible
+                      ? 'bg-emerald-400/20 text-emerald-200'
+                      : 'bg-rose-400/20 text-rose-200'
+                  }`}
+                >
+                  {scholarshipSummary.eligible ? 'Eligible' : 'Not Eligible'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-center text-sm">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                  <p className="text-zinc-400">Text</p>
+                  <p className="text-lg font-bold">{scholarshipSummary.textScore}%</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                  <p className="text-zinc-400">Voice</p>
+                  <p className="text-lg font-bold">{scholarshipSummary.voiceScore}%</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                  <p className="text-zinc-400">Game</p>
+                  <p className="text-lg font-bold">{scholarshipSummary.gameScore}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Detailed Results */}
         <div className="grid md:grid-cols-2 gap-6 mb-12">
@@ -252,7 +389,7 @@ export default function ResultsPage() {
               Question Breakdown
             </h2>
             <div className="space-y-3">
-              {results.map((result, index) => (
+              {displayResults.map((result, index) => (
                 <div
                   key={result.questionId}
                   className="flex items-center justify-between p-3 bg-zinc-950/40 rounded-xl"
@@ -299,7 +436,7 @@ export default function ResultsPage() {
         </div>
 
         {/* Game Scores */}
-        {(gameScores.templeRun || gameScores.reflexGame || gameScores.memoryGame) && (
+        {(displayGameScores.templeRun || displayGameScores.reflexGame || displayGameScores.memoryGame) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -311,18 +448,18 @@ export default function ResultsPage() {
               Game Performance
             </h2>
             <div className="grid md:grid-cols-3 gap-6">
-              {gameScores.templeRun && (
+              {displayGameScores.templeRun && (
                 <div className="p-4 bg-zinc-950/40 rounded-xl">
                   <h3 className="font-semibold mb-2">Temple Run</h3>
-                  <p className="text-2xl font-bold text-orange-400">{gameScores.templeRun.score}</p>
-                  <p className="text-xs text-zinc-500">Avg: {Math.round(gameScores.templeRun.reactionTime)}ms</p>
+                  <p className="text-2xl font-bold text-orange-400">{displayGameScores.templeRun.score}</p>
+                  <p className="text-xs text-zinc-500">Avg: {Math.round(displayGameScores.templeRun.reactionTime)}ms</p>
                 </div>
               )}
-              {gameScores.reflexGame && (
+              {displayGameScores.reflexGame && (
                 <div className="p-4 bg-zinc-950/40 rounded-xl">
                   <h3 className="font-semibold mb-2">Reflex Challenge</h3>
-                  <p className="text-2xl font-bold text-purple-400">{gameScores.reflexGame.score}</p>
-                  <p className="text-xs text-zinc-500">Avg: {Math.round(gameScores.reflexGame.reactionTime)}ms</p>
+                  <p className="text-2xl font-bold text-purple-400">{displayGameScores.reflexGame.score}</p>
+                  <p className="text-xs text-zinc-500">Avg: {Math.round(displayGameScores.reflexGame.reactionTime)}ms</p>
                 </div>
               )}
             </div>
@@ -347,6 +484,18 @@ export default function ResultsPage() {
                 ? 'Regenerate Full Report'
                 : 'Generate Comprehensive Report'
               : 'Complete All Tests to Unlock Report'}
+          </button>
+          <button
+            onClick={handleDownloadPdf}
+            disabled={loading || downloadingPdf}
+            className="px-8 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            {downloadingPdf ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Download className="w-5 h-5" />
+            )}
+            {downloadingPdf ? 'Generating PDF...' : 'Download PDF'}
           </button>
           <button
             onClick={() => router.push('/test')}

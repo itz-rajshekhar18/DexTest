@@ -161,6 +161,17 @@ export default function TempleRunGame() {
     reactionTimesRef.current = reactionTimes;
   }, [reactionTimes]);
 
+  useEffect(() => {
+    if (!gameStarted && !gameOver) return;
+
+    const averageReactionTime =
+      reactionTimes.length > 0
+        ? Math.round(reactionTimes.reduce((sum, time) => sum + time, 0) / reactionTimes.length)
+        : 0;
+
+    updateGameScore("templeRun", score, averageReactionTime);
+  }, [gameOver, gameStarted, reactionTimes, score, updateGameScore]);
+
   const endGame = useCallback(() => {
     if (endedRef.current) return;
     endedRef.current = true;
@@ -177,17 +188,19 @@ export default function TempleRunGame() {
 
     const timer = window.setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1) {
-          window.clearInterval(timer);
-          endGame();
-          return 0;
-        }
+        if (prev <= 1) return 0;
         return prev - 1;
       });
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [gameStarted, endGame]);
+  }, [gameStarted]);
+
+  useEffect(() => {
+    if (!gameStarted || timeLeft > 0) return;
+
+    endGame();
+  }, [endGame, gameStarted, timeLeft]);
 
   useEffect(() => {
     if (!gameStarted) return;

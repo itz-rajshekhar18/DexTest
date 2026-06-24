@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogIn, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
+import { LogIn, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useTestStore } from '@/lib/store';
@@ -44,14 +45,15 @@ export default function LoginPage() {
       // Store student info in global state, including age for adaptive AI agents.
       setStudentInfo(
         cleanCode,
-        parseInt(userData.class.match(/\d+/)[0], 10),
+        Number(String(userData.class || '').match(/\d+/)?.[0] || 10),
         userData.name,
-        Number(userData.age) || 0
+        Number(userData.age) || 0,
+        String(userData.gender || userData.sex || '')
       );
       
       // Navigate to test selection
       router.push('/test');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
       setError('An error occurred during login. Please try again.');
     } finally {
@@ -136,10 +138,10 @@ export default function LoginPage() {
           {/* Footer */}
           <div className="mt-6 pt-6 border-t border-zinc-800">
             <p className="text-center text-sm text-zinc-500">
-              Don't have an account?{' '}
-              <a href="/" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+              Don&apos;t have an account?{' '}
+              <Link href="/" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
                 Register here
-              </a>
+              </Link>
             </p>
           </div>
         </div>

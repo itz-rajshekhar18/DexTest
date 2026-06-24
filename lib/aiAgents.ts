@@ -5,7 +5,11 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
 
 const IQ_MODEL =
-  process.env.NEXT_PUBLIC_IQ_MODEL || "nvidia/llama-nemotron-rerank-vl-1b-v2:free";
+  process.env.NEXT_PUBLIC_IQ_MODEL || "openrouter/auto";
+const FREE_IQ_MODEL =
+  process.env.OPENROUTER_FREE_IQ_MODEL ||
+  process.env.NEXT_PUBLIC_FREE_IQ_MODEL ||
+  "openai/gpt-oss-20b:free";
 const TTS_MODEL =
   process.env.NEXT_PUBLIC_TTS_MODEL || "google/gemini-flash-1.5-8b";
 
@@ -23,6 +27,7 @@ type OpenRouterResponse = {
 };
 
 type QuestionType = "logical" | "mathematical" | "spatial" | "verbal";
+type QuestionAgentMode = "written" | "voice";
 
 type GameAssessment = {
   score: number;
@@ -44,99 +49,6 @@ function getErrorSummary(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-const fallbackQuestions: Question[] = [
-  {
-    id: "q1",
-    question: "If all roses are flowers and some flowers fade quickly, which statement must be true?",
-    options: ["All roses fade quickly", "Some roses may fade quickly", "No roses fade quickly", "All flowers are roses"],
-    correctAnswer: 1,
-    difficulty: "medium",
-    explanation: "The statement allows the possibility that some roses fade quickly, but it does not prove all do.",
-    timeLimit: 60,
-  },
-  {
-    id: "q2",
-    question: "What comes next in the sequence: 2, 6, 12, 20, 30, ?",
-    options: ["40", "42", "38", "36"],
-    correctAnswer: 1,
-    difficulty: "medium",
-    explanation: "The differences are consecutive even numbers: 4, 6, 8, 10, so the next difference is 12.",
-    timeLimit: 60,
-  },
-  {
-    id: "q3",
-    question: "If 5 machines make 5 widgets in 5 minutes, how long do 100 machines need to make 100 widgets?",
-    options: ["100 minutes", "5 minutes", "20 minutes", "1 minute"],
-    correctAnswer: 1,
-    difficulty: "hard",
-    explanation: "Each machine makes one widget in 5 minutes, so 100 machines make 100 widgets in 5 minutes.",
-    timeLimit: 60,
-  },
-  {
-    id: "q4",
-    question: "Which word does not belong with the others?",
-    options: ["Square", "Triangle", "Circle", "Rectangle"],
-    correctAnswer: 2,
-    difficulty: "easy",
-    explanation: "Circle is the only shape listed without straight sides or corners.",
-    timeLimit: 60,
-  },
-  {
-    id: "q5",
-    question: "If you rearrange the letters CIFAIPC, you would have the name of a:",
-    options: ["City", "Animal", "Ocean", "Country"],
-    correctAnswer: 2,
-    difficulty: "medium",
-    explanation: "The letters rearrange to PACIFIC, which is an ocean.",
-    timeLimit: 60,
-  },
-  {
-    id: "q6",
-    question: "A book costs $7 plus half its price. What does the book cost?",
-    options: ["$10.50", "$14", "$7", "$21"],
-    correctAnswer: 1,
-    difficulty: "hard",
-    explanation: "Let x be the price. x = 7 + x/2, so x/2 = 7 and x = 14.",
-    timeLimit: 60,
-  },
-  {
-    id: "q7",
-    question: "Which number should replace the question mark? 3, 7, 15, 31, ?",
-    options: ["62", "63", "64", "65"],
-    correctAnswer: 1,
-    difficulty: "medium",
-    explanation: "Each number is double the previous number plus 1.",
-    timeLimit: 60,
-  },
-  {
-    id: "q8",
-    question: "If some Smaugs are Thors and some Thors are Thrains, which statement must be true?",
-    options: ["All Smaugs are Thrains", "Some Smaugs are Thrains", "No Smaugs are Thrains", "Cannot be determined"],
-    correctAnswer: 3,
-    difficulty: "hard",
-    explanation: "The overlapping groups are not guaranteed to include the same members.",
-    timeLimit: 60,
-  },
-  {
-    id: "q9",
-    question: "What is the missing number? 1, 1, 2, 3, 5, 8, ?",
-    options: ["11", "13", "12", "10"],
-    correctAnswer: 1,
-    difficulty: "easy",
-    explanation: "This is the Fibonacci sequence. The next number is 5 + 8 = 13.",
-    timeLimit: 60,
-  },
-  {
-    id: "q10",
-    question: "Which comes next: J, F, M, A, M, ?",
-    options: ["J", "S", "A", "N"],
-    correctAnswer: 0,
-    difficulty: "medium",
-    explanation: "These are the first letters of the months. After May comes June.",
-    timeLimit: 60,
-  },
-];
-
 function canCallOpenRouter() {
   return Boolean(API_KEY && API_KEY !== "your_api_key_here");
 }
@@ -146,51 +58,121 @@ async function chatCompletion(model: string, messages: Message[], maxTokens = 16
     throw new Error("OpenRouter API key is not configured.");
   }
 
-  const response = await axios.post<OpenRouterResponse>(
-    OPENROUTER_API_URL,
-    {
-      model,
-      messages,
-      temperature: 0.65,
-      max_tokens: maxTokens,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://dextest.app",
-        "X-Title": "DexTest AI Agents",
+  const requestCompletion = async (modelId: string) => {
+    const response = await axios.post<OpenRouterResponse>(
+      OPENROUTER_API_URL,
+      {
+        model: modelId,
+        messages,
+        temperature: 0.65,
+        max_tokens: maxTokens,
       },
-    }
-  );
+      {
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://dextest.app",
+          "X-Title": "DexTest AI Agents",
+        },
+      }
+    );
 
-  return response.data.choices?.[0]?.message?.content?.trim() || "";
+    return response.data.choices?.[0]?.message?.content?.trim() || "";
+  };
+
+  try {
+    return await requestCompletion(model);
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 402 &&
+      model !== FREE_IQ_MODEL
+    ) {
+      console.warn(`OpenRouter model ${model} requires credits. Retrying with ${FREE_IQ_MODEL}.`);
+      return requestCompletion(FREE_IQ_MODEL);
+    }
+
+    throw error;
+  }
 }
 
-function parseQuestionJson(content: string, count: number): Question[] {
-  const clean = content.replace(/```json/g, "").replace(/```/g, "").trim();
-  const parsed = JSON.parse(clean) as Question[];
-
-  if (!Array.isArray(parsed)) {
+function normalizeGeneratedQuestions(rawQuestions: unknown, count: number, uniquenessSeed: string): Question[] {
+  if (!Array.isArray(rawQuestions)) {
     throw new Error("Question agent returned non-array JSON.");
   }
 
-  return parsed.slice(0, count).map((question, index) => ({
-    id: question.id || `q${index + 1}`,
-    question: question.question,
-    options: question.options.slice(0, 4),
-    correctAnswer: question.correctAnswer,
-    difficulty: question.difficulty || "medium",
-    explanation: question.explanation || "This follows from the reasoning pattern in the question.",
-    timeLimit: question.timeLimit || 60,
-  }));
+  const normalized = rawQuestions.slice(0, count).map((rawQuestion, index) => {
+    const question = rawQuestion as Partial<Question>;
+    const correctAnswer = Number(question.correctAnswer);
+    const options = Array.isArray(question.options) ? question.options.slice(0, 4).map(String) : [];
+
+    if (
+      typeof question.question !== "string" ||
+      question.question.trim().length === 0 ||
+      options.length !== 4 ||
+      !Number.isInteger(correctAnswer) ||
+      correctAnswer < 0 ||
+      correctAnswer > 3
+    ) {
+      throw new Error(`Question agent returned invalid question at index ${index}.`);
+    }
+
+    return {
+      id: `${uniquenessSeed}-q${index + 1}`,
+      question: question.question.trim(),
+      options,
+      correctAnswer,
+      difficulty: question.difficulty || "medium",
+      explanation: "",
+      timeLimit: question.timeLimit || 60,
+    };
+  });
+
+  if (normalized.length !== count) {
+    throw new Error(`Question agent returned ${normalized.length} questions instead of ${count}.`);
+  }
+
+  return normalized;
 }
 
-function getFallbackQuestions(count: number) {
-  return fallbackQuestions.slice(0, count).map((question, index) => ({
-    ...question,
-    id: `q${index + 1}`,
-  }));
+async function runPythonQuestionAgent({
+  mode,
+  classLevel,
+  count,
+  studentGender,
+  previousQuestions,
+  uniquenessSeed,
+}: {
+  mode: QuestionAgentMode;
+  classLevel: number;
+  count: number;
+  studentGender?: string;
+  previousQuestions?: string[];
+  uniquenessSeed: string;
+}) {
+  const response = await fetch("/api/ai-agents/questions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mode,
+      classLevel,
+      studentGender,
+      count,
+      previousQuestions,
+      uniquenessSeed,
+    }),
+  });
+
+  const payload = (await response.json()) as {
+    questions?: unknown;
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error || `Python IQ agent failed with ${response.status}.`);
+  }
+
+  return normalizeGeneratedQuestions(payload.questions, count, uniquenessSeed);
 }
 
 function summarizeResults(results: TestResult[]) {
@@ -217,64 +199,62 @@ function getGameSummary(session: TestSession) {
 
 export const writtenIQAgent = {
   name: "Written IQ Test Agent",
-  model: IQ_MODEL,
+  model: `${IQ_MODEL} via Python`,
   async generateTest({
     classLevel,
-    questionType,
     count = 10,
-    studentAge,
+    studentGender,
+    previousQuestions = [],
+    uniquenessSeed = `written-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   }: {
     classLevel: number;
     questionType: QuestionType;
     count?: number;
     studentAge?: number;
+    studentGender?: string;
+    previousQuestions?: string[];
+    uniquenessSeed?: string;
   }): Promise<Question[]> {
     try {
-      const content = await chatCompletion(
-        IQ_MODEL,
-        [
-          {
-            role: "system",
-            content:
-              "You create age-appropriate IQ test questions. Return only valid JSON and no markdown.",
-          },
-          {
-            role: "user",
-            content: `Generate ${count} ${questionType} IQ questions for a class ${classLevel || 10}${studentAge ? `, age ${studentAge},` : ""} student. Use this exact JSON shape:
-[
-  {
-    "id": "q1",
-    "question": "question text",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correctAnswer": 0,
-    "difficulty": "easy",
-    "explanation": "brief explanation",
-    "timeLimit": 60
-  }
-]`,
-          },
-        ],
-        2200
-      );
-
-      return parseQuestionJson(content, count);
+      return await runPythonQuestionAgent({
+        mode: "written",
+        classLevel,
+        count,
+        studentGender,
+        previousQuestions,
+        uniquenessSeed,
+      });
     } catch (error) {
-      console.warn("Written IQ Test Agent fallback:", getErrorSummary(error));
-      return getFallbackQuestions(count);
+      throw new Error(`Written IQ Test Agent could not generate AI questions. ${getErrorSummary(error)}`);
     }
   },
 };
 
 export const voiceIQAgent = {
   name: "Voice IQ Test Agent",
-  model: TTS_MODEL,
-  async generateVoiceQuestions(classLevel: number, count = 10, studentAge?: number) {
-    return writtenIQAgent.generateTest({
-      classLevel,
-      questionType: "verbal",
-      count,
-      studentAge,
-    });
+  model: `${IQ_MODEL} via Python`,
+  async generateVoiceQuestions(
+    classLevel: number,
+    count = 10,
+    studentAge?: number,
+    studentGender?: string,
+    previousQuestions: string[] = [],
+    uniquenessSeed = `voice-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  ) {
+    void studentAge;
+
+    try {
+      return await runPythonQuestionAgent({
+        mode: "voice",
+        classLevel,
+        count,
+        studentGender,
+        previousQuestions,
+        uniquenessSeed,
+      });
+    } catch (error) {
+      throw new Error(`Voice IQ Test Agent could not generate AI questions. ${getErrorSummary(error)}`);
+    }
   },
   async createSpokenPrompt(question: Question, questionNumber: number) {
     const fallback = `Question ${questionNumber}. ${question.question}. ${question.options

@@ -22,7 +22,8 @@ type SpeechRecognitionLike = {
   interimResults: boolean;
   lang: string;
   onresult: ((event: SpeechRecognitionResultEventLike) => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event?: { error?: string }) => void) | null;
+  onend: (() => void) | null;
   start: () => void;
   stop: () => void;
 };
@@ -42,18 +43,60 @@ type ElevenLabsTranscript = {
   words?: ElevenLabsWord[];
 };
 
-function parseAnswerIndex(text: string) {
-  const normalized = text.toLowerCase().trim();
+function normalizeSpokenText(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseAnswerIndex(text: string, options: string[] = []) {
+  const normalized = normalizeSpokenText(text);
   const optionMatch =
-    normalized.match(/\boption\s*([a-d1-4])\b/i) ||
-    normalized.match(/\banswer\s*([a-d1-4])\b/i) ||
-    normalized.match(/\b([a-d])\b/i) ||
-    normalized.match(/\b([1-4])\b/i);
+    normalized.match(/\b(?:option|answer|choose|chose|select|selected|pick|picked|my answer is|it is)\s+(?:number\s+)?([a-d1-4]|one|two|three|four|first|second|third|fourth|ay|bee|be|sea|see|cee|dee|d)\b/i) ||
+    normalized.match(/^(a|b|c|d|ay|bee|be|sea|see|cee|dee)$/i) ||
+    normalized.match(/\b([1-4]|one|two|three|four|first|second|third|fourth)\b/i);
 
-  if (!optionMatch) return null;
+  if (optionMatch) {
+    const answer = optionMatch[1].toLowerCase();
+    const spokenMap: Record<string, number> = {
+      a: 0,
+      ay: 0,
+      one: 0,
+      first: 0,
+      "1": 0,
+      b: 1,
+      bee: 1,
+      be: 1,
+      two: 1,
+      second: 1,
+      "2": 1,
+      c: 2,
+      cee: 2,
+      sea: 2,
+      see: 2,
+      three: 2,
+      third: 2,
+      "3": 2,
+      d: 3,
+      dee: 3,
+      four: 3,
+      fourth: 3,
+      "4": 3,
+    };
 
-  const answer = optionMatch[1].toLowerCase();
-  return answer.charCodeAt(0) >= 97 ? answer.charCodeAt(0) - 97 : Number(answer) - 1;
+    if (answer in spokenMap) return spokenMap[answer];
+  }
+
+  const exactOptionMatch = options.findIndex((option) => {
+    const normalizedOption = normalizeSpokenText(option);
+    return normalizedOption.length > 0 && normalized.includes(normalizedOption);
+  });
+
+  if (exactOptionMatch >= 0) return exactOptionMatch;
+
+  return null;
 }
 
 export default function VoiceBasedTest() {
@@ -76,9 +119,16 @@ export default function VoiceBasedTest() {
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsUrlRef = useRef<string | null>(null);
+  const recordingTimeoutRef = useRef<number | null>(null);
+  const browserTranscriptRef = useRef('');
+  const currentOptionsRef = useRef<string[]>([]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
+
+  useEffect(() => {
+    currentOptionsRef.current = currentQuestion?.options || [];
+  }, [currentQuestion?.options]);
 
   useEffect(() => {
     if (isTestCompleted('voice')) {
@@ -110,9 +160,11 @@ export default function VoiceBasedTest() {
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.toLowerCase();
+        const transcript = event.results[0]?.[0]?.transcript?.toLowerCase() || '';
+        if (!transcript) return;
         setTranscript(transcript);
-        const answerIndex = parseAnswerIndex(transcript);
+        browserTranscriptRef.current = transcript;
+        const answerIndex = parseAnswerIndex(transcript, currentOptionsRef.current);
         setSelectedAnswer(answerIndex);
         setSegments(
           transcript.split(/\s+/).filter(Boolean).map((word, index) => ({
@@ -132,9 +184,16 @@ export default function VoiceBasedTest() {
         setIsListening(false);
       };
 
-      recognitionRef.current.onerror = () => {
-        setVoiceStatus('Voice recognition failed. Please try again.');
+      recognitionRef.current.onerror = (event) => {
+        const reason = event?.error ? ` (${event.error})` : '';
+        setVoiceStatus(`Browser voice recognition failed${reason}. Please try again.`);
         setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        if (mediaRecorderRef.current?.state !== 'recording') {
+          setIsListening(false);
+        }
       };
     }
 
@@ -153,6 +212,9 @@ export default function VoiceBasedTest() {
       }
       if (ttsUrlRef.current) {
         URL.revokeObjectURL(ttsUrlRef.current);
+      }
+      if (recordingTimeoutRef.current) {
+        window.clearTimeout(recordingTimeoutRef.current);
       }
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
@@ -234,10 +296,19 @@ export default function VoiceBasedTest() {
 
   const startBrowserSpeechFallback = () => {
     if (recognitionRef.current && !isListening) {
-      setVoiceStatus('Listening with browser speech recognition fallback...');
+      browserTranscriptRef.current = '';
+      setVoiceStatus('Listening with browser speech recognition...');
       setIsListening(true);
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch {
+        setVoiceStatus('Voice recognition is already active. Speak now, then try again if needed.');
+      }
+      return true;
     }
+
+    setVoiceStatus('Voice recognition is not available in this browser. Use a Chromium browser with microphone access.');
+    return false;
   };
 
   const transcribeWithElevenLabs = async (audioBlob: Blob) => {
@@ -257,8 +328,8 @@ export default function VoiceBasedTest() {
       }
 
       const payload = (await response.json()) as ElevenLabsTranscript;
-      const text = payload.text || '';
-      const answerIndex = parseAnswerIndex(text);
+      const text = payload.text || browserTranscriptRef.current || '';
+      const answerIndex = parseAnswerIndex(text, currentOptionsRef.current);
 
       setTranscript(text);
       setSegments(payload.words || []);
@@ -270,13 +341,32 @@ export default function VoiceBasedTest() {
       );
     } catch (error) {
       console.warn('Falling back to browser speech recognition:', error);
-      setVoiceStatus('ElevenLabs STT unavailable. Falling back to browser STT.');
-      startBrowserSpeechFallback();
+      const browserText = browserTranscriptRef.current;
+      const browserAnswer = parseAnswerIndex(browserText, currentOptionsRef.current);
+
+      if (browserText) {
+        setTranscript(browserText);
+        setSelectedAnswer(browserAnswer);
+        setVoiceStatus(
+          browserAnswer === null
+            ? 'Browser heard speech, but no option was detected. Try saying the option letter or full answer.'
+            : `Detected option ${String.fromCharCode(65 + browserAnswer)} from browser voice.`
+        );
+        return;
+      }
+
+      setVoiceStatus('ElevenLabs STT unavailable. Try again and say the option letter or full answer.');
     }
   };
 
   const startListening = async () => {
     if (isListening || showExplanation) return;
+
+    stopSpeaking();
+    setTranscript('');
+    setSegments([]);
+    setSelectedAnswer(null);
+    browserTranscriptRef.current = '';
 
     if (!navigator.mediaDevices || typeof MediaRecorder === 'undefined') {
       startBrowserSpeechFallback();
@@ -288,29 +378,56 @@ export default function VoiceBasedTest() {
       streamRef.current = stream;
       audioChunksRef.current = [];
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : 'audio/webm',
-      });
+      const supportedMimeType = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/mpeg',
+      ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+
+      const recorder = supportedMimeType
+        ? new MediaRecorder(stream, { mimeType: supportedMimeType })
+        : new MediaRecorder(stream);
 
       mediaRecorderRef.current = recorder;
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
       recorder.onstop = () => {
+        if (recordingTimeoutRef.current) {
+          window.clearTimeout(recordingTimeoutRef.current);
+          recordingTimeoutRef.current = null;
+        }
         setIsListening(false);
         stream.getTracks().forEach((track) => track.stop());
-        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || supportedMimeType || 'audio/webm',
+        });
+        if (audioBlob.size === 0) {
+          setVoiceStatus('No voice audio was captured. Please allow microphone access and try again.');
+          return;
+        }
         void transcribeWithElevenLabs(audioBlob);
       };
 
-      setTranscript('');
-      setSegments([]);
-      setSelectedAnswer(null);
-      setVoiceStatus('Recording student answer...');
+      setVoiceStatus('Listening for 5 seconds. Say option A, B, C, D, or the full answer.');
       setIsListening(true);
-      recorder.start();
+      recorder.start(250);
+
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch {
+          browserTranscriptRef.current = '';
+        }
+      }
+
+      recordingTimeoutRef.current = window.setTimeout(() => {
+        if (mediaRecorderRef.current?.state === 'recording') {
+          setVoiceStatus('Processing recorded answer...');
+          mediaRecorderRef.current.stop();
+        }
+      }, 5000);
     } catch (error) {
       console.warn('Microphone recording failed:', error);
       startBrowserSpeechFallback();
@@ -318,9 +435,15 @@ export default function VoiceBasedTest() {
   };
 
   const stopListening = () => {
+    if (recordingTimeoutRef.current) {
+      window.clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+
     if (mediaRecorderRef.current?.state === 'recording') {
       setVoiceStatus('Processing recorded answer...');
       mediaRecorderRef.current.stop();
+      recognitionRef.current?.stop();
       return;
     }
 

@@ -4,14 +4,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isTestCompleted, useTestStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, CheckCircle, XCircle, Brain, ArrowRight } from 'lucide-react';
+import { Clock, Brain, ArrowRight } from 'lucide-react';
 
 export default function TextBasedTest() {
   const router = useRouter();
   const { questions, currentQuestionIndex, addResult, nextQuestion } = useTestStore();
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(60);
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const startTimeRef = useRef(0);
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -30,7 +30,7 @@ export default function TextBasedTest() {
   }, [questions.length, router]);
 
   const handleSubmit = useCallback(() => {
-    if (selectedAnswer === null || !currentQuestion || showExplanation) return;
+    if (selectedAnswer === null || !currentQuestion || hasSubmitted) return;
 
     const reactionTime = Date.now() - startTimeRef.current;
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
@@ -43,15 +43,15 @@ export default function TextBasedTest() {
       timestamp: new Date(),
     });
 
-    setShowExplanation(true);
-  }, [addResult, currentQuestion, selectedAnswer, showExplanation]);
+    setHasSubmitted(true);
+  }, [addResult, currentQuestion, selectedAnswer, hasSubmitted]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setTimeLeft(currentQuestion?.timeLimit || 60);
       startTimeRef.current = Date.now();
       setSelectedAnswer(null);
-      setShowExplanation(false);
+      setHasSubmitted(false);
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -152,66 +152,35 @@ export default function TextBasedTest() {
               {currentQuestion.options.map((option, index) => (
                 <motion.button
                   key={index}
-                  onClick={() => !showExplanation && setSelectedAnswer(index)}
-                  disabled={showExplanation}
-                  whileHover={{ scale: showExplanation ? 1 : 1.02 }}
-                  whileTap={{ scale: showExplanation ? 1 : 0.98 }}
+                  onClick={() => !hasSubmitted && setSelectedAnswer(index)}
+                  disabled={hasSubmitted}
+                  whileHover={{ scale: hasSubmitted ? 1 : 1.02 }}
+                  whileTap={{ scale: hasSubmitted ? 1 : 0.98 }}
                   className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                    showExplanation
-                      ? index === currentQuestion.correctAnswer
-                        ? 'border-green-500 bg-green-500/20'
-                        : index === selectedAnswer
-                        ? 'border-red-500 bg-red-500/20'
-                        : 'border-zinc-800 bg-zinc-900/40 opacity-50'
-                      : selectedAnswer === index
+                    selectedAnswer === index
                       ? 'border-indigo-500 bg-indigo-500/20'
+                      : hasSubmitted
+                      ? 'border-zinc-800 bg-zinc-900/40 opacity-50'
                       : 'border-zinc-800 bg-zinc-900/40 hover:border-zinc-700'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                      showExplanation && index === currentQuestion.correctAnswer
-                        ? 'bg-green-500 text-white'
-                        : showExplanation && index === selectedAnswer
-                        ? 'bg-red-500 text-white'
-                        : selectedAnswer === index
+                      selectedAnswer === index
                         ? 'bg-indigo-500 text-white'
                         : 'bg-zinc-800 text-zinc-400'
                     }`}>
                       {String.fromCharCode(65 + index)}
                     </div>
                     <span className="flex-1">{option}</span>
-                    {showExplanation && index === currentQuestion.correctAnswer && (
-                      <CheckCircle className="w-6 h-6 text-green-500" />
-                    )}
-                    {showExplanation && index === selectedAnswer && index !== currentQuestion.correctAnswer && (
-                      <XCircle className="w-6 h-6 text-red-500" />
-                    )}
                   </div>
                 </motion.button>
               ))}
             </div>
 
-            {/* Explanation */}
-            <AnimatePresence>
-              {showExplanation && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mb-6 p-4 bg-indigo-950/30 border border-indigo-900/50 rounded-xl"
-                >
-                  <h3 className="font-semibold text-indigo-400 mb-2">Explanation:</h3>
-                  <p className="text-zinc-300 text-sm leading-relaxed">
-                    {currentQuestion.explanation}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Action Buttons */}
             <div className="flex gap-4">
-              {!showExplanation ? (
+              {!hasSubmitted ? (
                 <button
                   onClick={handleSubmit}
                   disabled={selectedAnswer === null}

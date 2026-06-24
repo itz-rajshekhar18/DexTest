@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { BrainCircuit } from "lucide-react";
 
 type LoaderNode = {
   x: number;
@@ -138,7 +138,7 @@ export function LoadingAnimation() {
             transition={{ delay: 1.95, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           >
             <motion.div
-              className="relative rounded-[2rem] border border-cyan-300/25 bg-white/[0.055] p-5 shadow-[0_0_70px_rgba(34,211,238,0.22)] backdrop-blur-2xl"
+              className="relative overflow-hidden rounded-[1.75rem] border border-cyan-300/25 bg-slate-950 p-2 shadow-[0_0_70px_rgba(34,211,238,0.22)]"
               animate={{
                 boxShadow: [
                   "0 0 50px rgba(34,211,238,0.18)",
@@ -148,13 +148,17 @@ export function LoadingAnimation() {
               }}
               transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
             >
-              <BrainCircuit className="h-14 w-14 text-cyan-100" />
-              <span className="absolute inset-0 rounded-[2rem] ai-card-sweep" />
+              <Image
+                src="/dextest-logo-dark.png"
+                alt="DexTest"
+                width={420}
+                height={236}
+                priority
+                className="h-24 w-auto rounded-[1.35rem] object-contain sm:h-28"
+              />
+              <span className="absolute inset-0 rounded-[1.75rem] ai-card-sweep" />
             </motion.div>
             <div>
-              <div className="bg-gradient-to-r from-cyan-200 via-white to-violet-200 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl">
-                DexTest
-              </div>
               <div className="mt-3 text-xs font-semibold uppercase tracking-[0.38em] text-cyan-100/55">
                 Neural Interface Online
               </div>

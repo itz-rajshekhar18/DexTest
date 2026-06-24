@@ -70,6 +70,7 @@ export default function ReflexGame() {
   const targetSpawnTimeRef = useRef(0);
   const scoreRef = useRef(0);
   const reactionTimesRef = useRef<number[]>([]);
+  const gameEndHandledRef = useRef(false);
   
   const { setTestType, updateGameScore } = useTestStore();
 
@@ -88,6 +89,17 @@ export default function ReflexGame() {
     reactionTimesRef.current = reactionTimes;
   }, [reactionTimes]);
 
+  useEffect(() => {
+    if (!gameStarted && !gameOver) return;
+
+    const averageReactionTime =
+      reactionTimes.length > 0
+        ? Math.round(reactionTimes.reduce((sum, time) => sum + time, 0) / reactionTimes.length)
+        : 0;
+
+    updateGameScore('reflexGame', score, averageReactionTime);
+  }, [gameOver, gameStarted, reactionTimes, score, updateGameScore]);
+
   const spawnTarget = () => {
     const x = (Math.random() - 0.5) * 8;
     const y = (Math.random() - 0.5) * 4;
@@ -105,8 +117,12 @@ export default function ReflexGame() {
   };
 
   const handleGameEnd = useCallback(() => {
+    if (gameEndHandledRef.current) return;
+
+    gameEndHandledRef.current = true;
     setGameOver(true);
     setGameStarted(false);
+    setTargets([]);
 
     const assessment = gameIQAgent.assessReflexGame(scoreRef.current, reactionTimesRef.current);
     setAgentSignal(assessment.cognitiveSignal);
@@ -118,16 +134,19 @@ export default function ReflexGame() {
 
     const interval = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
-          handleGameEnd();
-          return 0;
-        }
+        if (prev <= 1) return 0;
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gameStarted, handleGameEnd]);
+  }, [gameStarted]);
+
+  useEffect(() => {
+    if (!gameStarted || timeLeft > 0) return;
+
+    handleGameEnd();
+  }, [gameStarted, handleGameEnd, timeLeft]);
 
   useEffect(() => {
     if (!gameStarted) return;
@@ -145,6 +164,8 @@ export default function ReflexGame() {
     setScore(0);
     setTimeLeft(30);
     setReactionTimes([]);
+    setAgentSignal('Collecting reaction data.');
+    gameEndHandledRef.current = false;
     spawnTarget();
   };
 

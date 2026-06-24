@@ -27,6 +27,7 @@ export function CinematicDomEffects() {
       document.documentElement.classList.add("ai-effects-ready");
 
       const cards = gsap.utils.toArray<HTMLElement>(cardSelector).filter((card) => {
+        if (card.closest("[data-ai-effects='off']")) return false;
         const rect = card.getBoundingClientRect();
         return rect.width > 140 && rect.height > 80;
       });
@@ -75,6 +76,7 @@ export function CinematicDomEffects() {
 
       const interactiveElements = gsap.utils.toArray<HTMLElement>(interactiveSelector);
       interactiveElements.forEach((element) => {
+        if (element.closest("[data-ai-effects='off']")) return;
         element.classList.add("ai-magnetic");
         if (reduceMotion) return;
 
@@ -109,6 +111,7 @@ export function CinematicDomEffects() {
 
         revealElements.forEach((element) => {
           if (element.closest("[aria-hidden='true']")) return;
+          if (element.closest("[data-ai-effects='off']")) return;
           gsap.fromTo(
             element,
             {
