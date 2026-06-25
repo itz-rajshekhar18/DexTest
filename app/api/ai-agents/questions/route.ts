@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
 
@@ -18,24 +20,40 @@ type QuestionAgentRequest = {
 const isQuestionAgentMode = (value: unknown): value is QuestionAgentMode =>
   value === 'written' || value === 'voice';
 
-const getPythonCommand = () => {
-  const configuredPython = process.env.PYTHON || process.env.PYTHON_PATH;
-
-  if (configuredPython) {
-    return { command: configuredPython, args: [] };
-  }
-
-  if (process.platform === 'win32') {
-    return { command: 'py', args: ['-3'] };
-  }
-
-  return { command: 'python3', args: [] };
+type PythonCandidate = {
+  command: string;
+  args: string[];
 };
 
-const runPythonQuestionAgent = (scriptPath: string, payload: string) =>
+const getPythonCandidates = (): PythonCandidate[] => {
+  const configuredPython =
+    process.env.IQ_AGENT_PYTHON_PATH ||
+    process.env.PDF_PYTHON_PATH ||
+    process.env.PYTHON ||
+    process.env.PYTHON_PATH;
+  const homeDir = os.homedir();
+  const codexBundled = path.join(
+    process.env.USERPROFILE || homeDir,
+    '.cache',
+    'codex-runtimes',
+    'codex-primary-runtime',
+    'dependencies',
+    'python',
+    'python.exe'
+  );
+
+  return [
+    ...(configuredPython ? [{ command: configuredPython, args: [] }] : []),
+    ...(existsSync(codexBundled) ? [{ command: codexBundled, args: [] }] : []),
+    { command: 'python3', args: [] },
+    { command: 'python', args: [] },
+    { command: 'py', args: ['-3'] },
+  ];
+};
+
+const runCandidate = (candidate: PythonCandidate, scriptPath: string, payload: string) =>
   new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    const python = getPythonCommand();
-    const child = spawn(python.command, [...python.args, scriptPath], {
+    const child = spawn(candidate.command, [...candidate.args, scriptPath], {
       cwd: process.cwd(),
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -74,6 +92,20 @@ const runPythonQuestionAgent = (scriptPath: string, payload: string) =>
     child.stdin.end();
   });
 
+const runPythonQuestionAgent = async (scriptPath: string, payload: string) => {
+  let lastError = 'No Python interpreter available for the IQ agent.';
+
+  for (const candidate of getPythonCandidates()) {
+    try {
+      return await runCandidate(candidate, scriptPath, payload);
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  throw new Error(lastError);
+};
+
 const windowlessTimeout = (callback: () => void, timeoutMs: number) =>
   setTimeout(callback, timeoutMs);
 
@@ -91,6 +123,12 @@ export async function POST(request: Request) {
       body.uniquenessSeed || `${mode}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const scriptPath = path.join(process.cwd(), 'agents', 'iq_question_agents.py');
+    if (!existsSync(scriptPath)) {
+      return NextResponse.json(
+        { error: `Python IQ agent script not found at ${scriptPath}.` },
+        { status: 500 }
+      );
+    }
     const payload = JSON.stringify({
       mode,
       classLevel,
