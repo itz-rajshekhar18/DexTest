@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { LogIn, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { useTestStore } from '@/lib/store';
+import { clearPreviousAttemptSnapshot, savePreviousAttemptSnapshot, useTestStore } from '@/lib/store';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,6 +50,32 @@ export default function LoginPage() {
         Number(userData.age) || 0,
         String(userData.gender || userData.sex || '')
       );
+
+      if (userData.lastTestResults || userData.lastTestDate) {
+        savePreviousAttemptSnapshot({
+          hasAttempted: true,
+          studentCode: cleanCode,
+          studentName: String(userData.name || ''),
+          studentClass: Number(String(userData.class || '').match(/\d+/)?.[0] || 10),
+          lastTestDate:
+            typeof userData.lastTestDate?.toDate === 'function'
+              ? userData.lastTestDate.toDate().toISOString()
+              : String(userData.lastTestDate || ''),
+          lastTestResults: {
+            score: Number(userData.lastTestResults?.score || 0),
+            iqScore: Number(userData.lastTestResults?.iqScore || 0),
+            correctAnswers: Number(userData.lastTestResults?.correctAnswers || 0),
+            totalQuestions: Number(userData.lastTestResults?.totalQuestions || 0),
+            avgReactionTime: Number(userData.lastTestResults?.avgReactionTime || 0),
+            gameScores: userData.lastTestResults?.gameScores || {},
+            attentionScore: Number(userData.lastTestResults?.attentionScore || 0),
+            analysis: String(userData.lastTestResults?.analysis || ''),
+            scholarship: userData.lastTestResults?.scholarship || undefined,
+          },
+        });
+      } else {
+        clearPreviousAttemptSnapshot();
+      }
       
       // Navigate to test selection
       router.push('/test');

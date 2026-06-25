@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
 
@@ -31,8 +32,9 @@ type PythonCandidate = {
 
 function getPythonCandidates(scriptPath: string): PythonCandidate[] {
   const envPath = process.env.PDF_PYTHON_PATH;
+  const homeDir = os.homedir();
   const codexBundled = path.join(
-    process.env.USERPROFILE || "",
+    process.env.USERPROFILE || homeDir,
     ".cache",
     "codex-runtimes",
     "codex-primary-runtime",
@@ -52,14 +54,19 @@ function getPythonCandidates(scriptPath: string): PythonCandidate[] {
 
 function runPdfGenerator(payload: PdfReportRequest) {
   const scriptPath = path.join(process.cwd(), "lib", "pdf_report_generator.py");
+
+  if (!existsSync(scriptPath)) {
+    throw new Error(`PDF generator script not found at ${scriptPath}`);
+  }
+
   const candidates = getPythonCandidates(scriptPath);
   let lastError = "";
 
   for (const candidate of candidates) {
     const result = spawnSync(candidate.command, candidate.args, {
-      input: JSON.stringify(payload),
-      encoding: "buffer",
+      input: Buffer.from(JSON.stringify(payload), "utf8"),
       maxBuffer: 20 * 1024 * 1024,
+      windowsHide: true,
     });
 
     if (result.error) {

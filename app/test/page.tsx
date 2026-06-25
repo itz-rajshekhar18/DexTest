@@ -10,8 +10,11 @@ import { db } from '@/lib/firebase';
 import {
   getCompletedTests,
   getLatestTestSession,
+  getPreviousAttemptSnapshot,
   getStudentProfile,
   getTestSessions,
+  savePreviousAttemptSnapshot,
+  clearPreviousAttemptSnapshot,
   type StudentProfile,
   type TestType,
   useTestStore,
@@ -33,6 +36,7 @@ export default function TestSelectionPage() {
     voice: false,
     game: false,
   });
+  const [hasPreviousAttempt, setHasPreviousAttempt] = useState(false);
   const allTestsCompleted = completedTests.text && completedTests.voice && completedTests.game;
   const {
     studentAge,
@@ -47,7 +51,10 @@ export default function TestSelectionPage() {
   } = useTestStore();
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setCompletedTests(getCompletedTests()), 0);
+    const timer = window.setTimeout(() => {
+      setCompletedTests(getCompletedTests());
+      setHasPreviousAttempt(Boolean(getPreviousAttemptSnapshot()?.hasAttempted));
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -94,6 +101,33 @@ export default function TestSelectionPage() {
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
+          if (userData.lastTestResults || userData.lastTestDate) {
+            savePreviousAttemptSnapshot({
+              hasAttempted: true,
+              studentCode: code,
+              studentName: String(userData.name || cachedProfile?.studentName || studentName || 'Student'),
+              studentClass: parseClassLevel(userData.class),
+              lastTestDate:
+                typeof userData.lastTestDate?.toDate === 'function'
+                  ? userData.lastTestDate.toDate().toISOString()
+                  : String(userData.lastTestDate || ''),
+              lastTestResults: {
+                score: Number(userData.lastTestResults?.score || 0),
+                iqScore: Number(userData.lastTestResults?.iqScore || 0),
+                correctAnswers: Number(userData.lastTestResults?.correctAnswers || 0),
+                totalQuestions: Number(userData.lastTestResults?.totalQuestions || 0),
+                avgReactionTime: Number(userData.lastTestResults?.avgReactionTime || 0),
+                gameScores: userData.lastTestResults?.gameScores || {},
+                attentionScore: Number(userData.lastTestResults?.attentionScore || 0),
+                analysis: String(userData.lastTestResults?.analysis || ''),
+                scholarship: userData.lastTestResults?.scholarship || undefined,
+              },
+            });
+            setHasPreviousAttempt(true);
+          } else {
+            clearPreviousAttemptSnapshot();
+            setHasPreviousAttempt(false);
+          }
           const profile = {
             studentCode: code,
             studentClass: parseClassLevel(userData.class),
@@ -249,6 +283,43 @@ export default function TestSelectionPage() {
                 >
                   <FileText className="h-5 w-5" />
                   View Results
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {hasPreviousAttempt && !allTestsCompleted && (
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-10 overflow-hidden rounded-3xl border border-indigo-300/25 bg-indigo-500/10 shadow-[0_0_40px_rgba(99,102,241,0.12)] backdrop-blur-xl"
+          >
+            <div className="grid gap-0 md:grid-cols-[1.2fr_auto]">
+              <div className="p-7">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="rounded-2xl border border-indigo-300/25 bg-indigo-300/10 p-3">
+                    <FileText className="h-7 w-7 text-indigo-200" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em] text-indigo-200/80">Previous Attempt Found</p>
+                    <h2 className="text-2xl font-bold text-white">Saved results are available</h2>
+                  </div>
+                </div>
+                <p className="max-w-2xl text-sm leading-relaxed text-zinc-300">
+                  This student has attempted the assessment before. Open the results page to review the saved report,
+                  then continue with a fresh attempt whenever you&apos;re ready.
+                </p>
+              </div>
+              <div className="flex items-center border-t border-white/10 bg-black/20 p-7 md:border-l md:border-t-0">
+                <button
+                  onClick={() => router.push('/test/results')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-500 px-7 py-3 font-semibold text-white transition hover:opacity-90 md:w-auto"
+                >
+                  <FileText className="h-5 w-5" />
+                  View Previous Results
                   <ArrowRight className="h-5 w-5" />
                 </button>
               </div>

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Trophy, Brain, Clock, Target, TrendingUp, CheckCircle, XCircle, Home, Loader2, FileText, Lock, Download } from 'lucide-react';
-import { useTestStore, getAssessmentSnapshot, getCompletedTests, getLatestTestSession, getSessionMetrics, getTestSessions, type TestType } from '@/lib/store';
+import { useTestStore, getAssessmentSnapshot, getCompletedTests, getLatestTestSession, getPreviousAttemptSnapshot, getSessionMetrics, getTestSessions, type TestType } from '@/lib/store';
 import { reportAgent } from '@/lib/aiAgents';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -69,6 +69,9 @@ export default function ResultsPage() {
 
   const allTestsCompleted = completedTests.text && completedTests.voice && completedTests.game;
   const storedSessions = getTestSessions();
+  const previousAttempt = getPreviousAttemptSnapshot();
+  const remoteResults = previousAttempt?.lastTestResults;
+  const hasRemoteAttempt = Boolean(previousAttempt?.hasAttempted && remoteResults);
   const latestSession =
     getLatestTestSession(testType || undefined) ||
     getLatestTestSession();
@@ -91,14 +94,44 @@ export default function ResultsPage() {
         attentionScore,
       }
     : latestSession;
+  const hasLocalSessionData = hasCurrentAttempt || storedSessions.length > 0;
   const displayResults = activeSession?.results || [];
-  const displayGameScores = activeSession?.gameScores || {};
+  const displayGameScores = activeSession?.gameScores || remoteResults?.gameScores || {};
   const activeMetrics = getSessionMetrics(activeSession || undefined);
-  const assessmentSnapshot = getAssessmentSnapshot(storedSessions);
-  const scholarshipSummary = getScholarshipSummary(storedSessions);
+  const assessmentSnapshot = hasLocalSessionData
+    ? getAssessmentSnapshot(storedSessions)
+    : {
+        accuracy: Number(remoteResults?.score || 0),
+        averageReactionTime: Math.round(Number(remoteResults?.avgReactionTime || 0)),
+        attentionScore: Math.round(Number(remoteResults?.attentionScore || 100)),
+        estimatedIQ: Number(remoteResults?.iqScore || Math.round(Math.max(70, Math.min(150, 100 + ((Number(remoteResults?.score || 0) - 50) * 0.5) - ((Number(remoteResults?.avgReactionTime || 0) - 5000) / 1000))))),
+      };
+  const scholarshipSummary = hasLocalSessionData
+    ? getScholarshipSummary(storedSessions)
+    : {
+        textScore: Number(remoteResults?.scholarship?.textScore || 0),
+        voiceScore: Number(remoteResults?.scholarship?.voiceScore || 0),
+        gameScore: Number(remoteResults?.scholarship?.gameScore || 0),
+        totalPercentage: Number(remoteResults?.scholarship?.totalPercentage || remoteResults?.score || 0),
+        eligible: Boolean(
+          typeof remoteResults?.scholarship?.eligible === 'boolean'
+            ? remoteResults.scholarship.eligible
+            : Number(remoteResults?.score || 0) > 30
+        ),
+      };
+  const displayStudentName = studentName || previousAttempt?.studentName || 'Student';
+  const displayStudentClass = studentClass || previousAttempt?.studentClass || 'N/A';
+  const canShowSavedAnalysis = Boolean(remoteResults?.analysis);
 
   const analyzeResults = async () => {
     try {
+      if (!latestSession && hasRemoteAttempt) {
+        setCompletedTests(getCompletedTests());
+        setAnalysis(remoteResults?.analysis || 'Saved results found for this student. Detailed AI analysis is not available in this browser session yet.');
+        setLoading(false);
+        return;
+      }
+
       if (!latestSession) {
         setAnalysis('No test results available. Please complete a test first.');
         setLoading(false);
@@ -128,12 +161,14 @@ export default function ResultsPage() {
           lastTestDate: serverTimestamp(),
           lastTestResults: {
             score: assessmentSnapshot.accuracy,
+            iqScore: calculateIQScore(),
             correctAnswers: displayResults.filter(r => r.isCorrect).length,
             totalQuestions: displayResults.length,
             avgReactionTime: assessmentSnapshot.averageReactionTime,
             gameScores: displayGameScores,
             attentionScore: activeSession?.attentionScore ?? assessmentSnapshot.attentionScore,
             analysis: performanceAnalysis,
+            scholarship: scholarshipSummary,
           },
         });
       }
@@ -154,7 +189,7 @@ export default function ResultsPage() {
   };
 
   useEffect(() => {
-    const hasStoredAttempt = storedSessions.length > 0;
+    const hasStoredAttempt = storedSessions.length > 0 || hasRemoteAttempt;
 
     if (!hasCurrentAttempt && !hasStoredAttempt) {
       router.push('/test');
@@ -264,7 +299,7 @@ export default function ResultsPage() {
             Test Results
           </h1>
           <p className="text-zinc-400 text-lg">
-            {studentName} - Class {studentClass}
+            {displayStudentName} - Class {displayStudentClass}
           </p>
         </motion.div>
 
@@ -388,24 +423,31 @@ export default function ResultsPage() {
               <TrendingUp className="w-6 h-6 text-indigo-400" />
               Question Breakdown
             </h2>
-            <div className="space-y-3">
-              {displayResults.map((result, index) => (
-                <div
-                  key={result.questionId}
-                  className="flex items-center justify-between p-3 bg-zinc-950/40 rounded-xl"
-                >
-                  <div className="flex items-center gap-3">
-                    {result.isCorrect ? (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-500" />
-                    )}
-                    <span className="text-sm">Question {index + 1}</span>
+            {displayResults.length > 0 ? (
+              <div className="space-y-3">
+                {displayResults.map((result, index) => (
+                  <div
+                    key={result.questionId}
+                    className="flex items-center justify-between p-3 bg-zinc-950/40 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      {result.isCorrect ? (
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-500" />
+                      )}
+                      <span className="text-sm">Question {index + 1}</span>
+                    </div>
+                    <span className="text-xs text-zinc-500">{result.reactionTime}ms</span>
                   </div>
-                  <span className="text-xs text-zinc-500">{result.reactionTime}ms</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-zinc-400">
+                Detailed question-by-question data is unavailable for this saved attempt. Summary results are shown from
+                the student&apos;s previous Firestore record.
+              </div>
+            )}
           </motion.div>
 
           {/* AI Analysis */}
@@ -418,10 +460,12 @@ export default function ResultsPage() {
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               {allTestsCompleted ? (
                 <Brain className="w-6 h-6 text-purple-400" />
+              ) : canShowSavedAnalysis ? (
+                <Brain className="w-6 h-6 text-purple-400" />
               ) : (
                 <Lock className="w-6 h-6 text-purple-400" />
               )}
-              {allTestsCompleted ? 'AI Analysis' : 'AI Analysis Locked'}
+              {allTestsCompleted || canShowSavedAnalysis ? 'AI Analysis' : 'AI Analysis Locked'}
             </h2>
             {loading ? (
               <div className="flex items-center justify-center py-12">

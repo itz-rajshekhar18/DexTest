@@ -49,10 +49,38 @@ export interface TestSession {
   };
 }
 
+export interface PreviousAttemptResults {
+  score?: number;
+  iqScore?: number;
+  correctAnswers?: number;
+  totalQuestions?: number;
+  avgReactionTime?: number;
+  gameScores?: TestSession['gameScores'];
+  attentionScore?: number;
+  analysis?: string;
+  scholarship?: {
+    textScore?: number;
+    voiceScore?: number;
+    gameScore?: number;
+    totalPercentage?: number;
+    eligible?: boolean;
+  };
+}
+
+export interface PreviousAttemptSnapshot {
+  hasAttempted: boolean;
+  studentCode: string;
+  studentName?: string;
+  studentClass?: number;
+  lastTestDate?: string;
+  lastTestResults?: PreviousAttemptResults;
+}
+
 const TEST_SESSIONS_KEY = 'testSessions';
 const COMPLETED_TESTS_KEY = 'completedTests';
 const STUDENT_PROFILE_KEY = 'studentProfile';
 const TEST_PROGRESS_CACHE_KEY = 'testProgressCache';
+const PREVIOUS_ATTEMPT_KEY = 'previousAttemptSnapshot';
 
 const canUseSessionStorage = () =>
   typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
@@ -248,6 +276,35 @@ export const getStudentProfile = (): StudentProfile | null => {
   }
 };
 
+export const savePreviousAttemptSnapshot = (snapshot: PreviousAttemptSnapshot) => {
+  try {
+    if (!canUseSessionStorage()) return;
+    sessionStorage.setItem(PREVIOUS_ATTEMPT_KEY, JSON.stringify(snapshot));
+  } catch (error) {
+    console.error('Error saving previous attempt snapshot:', error);
+  }
+};
+
+export const getPreviousAttemptSnapshot = (): PreviousAttemptSnapshot | null => {
+  try {
+    if (!canUseSessionStorage()) return null;
+    const snapshot = sessionStorage.getItem(PREVIOUS_ATTEMPT_KEY);
+    return snapshot ? JSON.parse(snapshot) : null;
+  } catch (error) {
+    console.error('Error getting previous attempt snapshot:', error);
+    return null;
+  }
+};
+
+export const clearPreviousAttemptSnapshot = () => {
+  try {
+    if (!canUseSessionStorage()) return;
+    sessionStorage.removeItem(PREVIOUS_ATTEMPT_KEY);
+  } catch (error) {
+    console.error('Error clearing previous attempt snapshot:', error);
+  }
+};
+
 export const saveTestSession = (session: TestSession) => {
   try {
     if (!canUseSessionStorage()) return;
@@ -325,6 +382,7 @@ export const clearTestSessions = () => {
     sessionStorage.removeItem(TEST_SESSIONS_KEY);
     sessionStorage.removeItem(COMPLETED_TESTS_KEY);
     sessionStorage.removeItem(TEST_PROGRESS_CACHE_KEY);
+    sessionStorage.removeItem(PREVIOUS_ATTEMPT_KEY);
   } catch (error) {
     console.error('Error clearing test sessions:', error);
   }
