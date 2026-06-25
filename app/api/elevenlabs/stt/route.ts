@@ -46,26 +46,43 @@ export async function POST(request: NextRequest) {
   formData.append("keyterms", "C");
   formData.append("keyterms", "D");
 
-  const response = await fetch(`${ELEVENLABS_API_URL}/speech-to-text`, {
-    method: "POST",
-    headers: {
-      "xi-api-key": configuredApiKey,
-    },
-    body: formData,
-  });
+  try {
+    const response = await fetch(`${ELEVENLABS_API_URL}/speech-to-text`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": configuredApiKey,
+      },
+      body: formData,
+    });
 
-  const payload = await response.json();
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('ElevenLabs STT API error:', response.status, errorText);
+      return NextResponse.json(
+        { 
+          error: "ElevenLabs STT API failed.", 
+          status: response.status,
+          details: errorText 
+        },
+        { status: response.status }
+      );
+    }
 
-  if (!response.ok) {
+    const payload = await response.json();
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    console.error('ElevenLabs STT request failed:', error);
     return NextResponse.json(
-      { error: "ElevenLabs STT failed.", details: payload },
-      { status: response.status }
+      { 
+        error: "ElevenLabs STT service unavailable.", 
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 503 }
     );
   }
-
-  return NextResponse.json(payload, {
-    headers: {
-      "Cache-Control": "no-store",
-    },
-  });
 }

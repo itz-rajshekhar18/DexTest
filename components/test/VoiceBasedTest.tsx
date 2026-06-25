@@ -185,9 +185,40 @@ export default function VoiceBasedTest() {
       };
 
       recognitionRef.current.onerror = (event) => {
-        const reason = event?.error ? ` (${event.error})` : '';
-        setVoiceStatus(`Browser voice recognition failed${reason}. Please try again.`);
+        const error = event?.error || 'unknown';
+        let message = '';
+        
+        switch (error) {
+          case 'network':
+            message = 'Network error - speech recognition needs internet. Click "Answer by Voice" to use microphone recording instead.';
+            break;
+          case 'not-allowed':
+          case 'permission-denied':
+            message = 'Microphone permission denied. Please allow microphone access in your browser settings.';
+            break;
+          case 'no-speech':
+            message = 'No speech detected. Click "Answer by Voice" to try again.';
+            break;
+          case 'aborted':
+            message = 'Speech recognition stopped. Click "Answer by Voice" to try again.';
+            break;
+          case 'audio-capture':
+            message = 'No microphone found. Please connect a microphone and try again.';
+            break;
+          case 'service-not-allowed':
+            message = 'Speech recognition service not available. Using audio recording fallback.';
+            break;
+          default:
+            message = `Speech recognition error (${error}). Click "Answer by Voice" to use audio recording.`;
+        }
+        
+        setVoiceStatus(message);
         setIsListening(false);
+        
+        // If browser speech fails due to network, we'll use MediaRecorder + ElevenLabs STT instead
+        if (error === 'network' || error === 'service-not-allowed') {
+          console.log('Browser speech recognition unavailable, will use MediaRecorder + ElevenLabs STT on next attempt');
+        }
       };
 
       recognitionRef.current.onend = () => {
@@ -301,22 +332,41 @@ export default function VoiceBasedTest() {
       setIsListening(true);
       try {
         recognitionRef.current.start();
-      } catch {
-        setVoiceStatus('Voice recognition is already active. Speak now, then try again if needed.');
+      } catch (error) {
+        console.warn('Speech recognition start failed:', error);
+        setVoiceStatus('Voice recognition already active or unavailable. Speak now, then try again if needed.');
       }
       return true;
     }
 
-    setVoiceStatus('Voice recognition is not available in this browser. Use a Chromium browser with microphone access.');
+    setVoiceStatus('Voice recognition not available. Click "Answer by Voice" to record audio instead.');
     return false;
   };
 
   const transcribeWithElevenLabs = async (audioBlob: Blob) => {
-    setVoiceStatus('Segmenting student answer with ElevenLabs STT...');
+    setVoiceStatus('🔄 Transcribing your answer...');
 
+    // First, check if we have browser transcription from parallel processing
+    const browserText = browserTranscriptRef.current?.trim();
+    
+    // Try ElevenLabs STT with proper audio format
     try {
+      // Convert audio to supported format if needed
+      let audioFile = audioBlob;
+      let fileName = 'student-answer.webm';
+      
+      // Check if we need to convert the format
+      const mimeType = audioBlob.type;
+      console.log('Original audio format:', mimeType, 'Size:', audioBlob.size);
+      
+      // ElevenLabs accepts: mp3, mp4, mpeg, mpga, m4a, wav, webm
+      if (audioBlob.size < 1000) {
+        console.warn('Audio file too small, likely empty recording');
+        throw new Error('Audio recording too short or empty');
+      }
+
       const formData = new FormData();
-      formData.append('file', audioBlob, 'student-answer.webm');
+      formData.append('file', audioFile, fileName);
 
       const response = await fetch('/api/elevenlabs/stt', {
         method: 'POST',
@@ -324,38 +374,52 @@ export default function VoiceBasedTest() {
       });
 
       if (!response.ok) {
-        throw new Error('ElevenLabs STT unavailable');
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('ElevenLabs STT failed:', response.status, errorData);
+        throw new Error(`ElevenLabs STT failed with status ${response.status}`);
       }
 
       const payload = (await response.json()) as ElevenLabsTranscript;
-      const text = payload.text || browserTranscriptRef.current || '';
+      const aiText = payload.text?.trim() || '';
+      
+      // Prefer AI transcription, fallback to browser
+      const text = aiText || browserText;
+      
+      if (!text) {
+        setVoiceStatus('❌ No speech detected. Please speak louder and try again.');
+        return;
+      }
+
       const answerIndex = parseAnswerIndex(text, currentOptionsRef.current);
 
       setTranscript(text);
       setSegments(payload.words || []);
       setSelectedAnswer(answerIndex);
-      setVoiceStatus(
-        answerIndex === null
-          ? 'Segmented answer, but no A/B/C/D option was detected.'
-          : `Detected option ${String.fromCharCode(65 + answerIndex)} from voice.`
-      );
+      
+      if (answerIndex === null) {
+        setVoiceStatus('✅ Heard: "' + text + '" - but no A/B/C/D option detected. Try saying just the letter.');
+      } else {
+        setVoiceStatus(`✅ Detected option ${String.fromCharCode(65 + answerIndex)} from your voice!`);
+      }
     } catch (error) {
-      console.warn('Falling back to browser speech recognition:', error);
-      const browserText = browserTranscriptRef.current;
-      const browserAnswer = parseAnswerIndex(browserText, currentOptionsRef.current);
-
+      console.warn('ElevenLabs STT unavailable, using browser transcription:', error);
+      
+      // If we have browser transcription from parallel processing, use it
       if (browserText) {
+        const browserAnswer = parseAnswerIndex(browserText, currentOptionsRef.current);
         setTranscript(browserText);
         setSelectedAnswer(browserAnswer);
-        setVoiceStatus(
-          browserAnswer === null
-            ? 'Browser heard speech, but no option was detected. Try saying the option letter or full answer.'
-            : `Detected option ${String.fromCharCode(65 + browserAnswer)} from browser voice.`
-        );
+        
+        if (browserAnswer === null) {
+          setVoiceStatus('📝 Heard: "' + browserText + '" - but no option detected. Click your answer or say the letter clearly.');
+        } else {
+          setVoiceStatus(`✅ Detected option ${String.fromCharCode(65 + browserAnswer)} from browser voice!`);
+        }
         return;
       }
-
-      setVoiceStatus('ElevenLabs STT unavailable. Try again and say the option letter or full answer.');
+      
+      // If no browser transcription, inform user
+      setVoiceStatus('🎤 AI transcription unavailable. Using browser speech recognition. Please say your answer again or click your choice.');
     }
   };
 
@@ -368,8 +432,49 @@ export default function VoiceBasedTest() {
     setSelectedAnswer(null);
     browserTranscriptRef.current = '';
 
+    // For this use case (detecting A/B/C/D), browser speech recognition is actually more reliable
+    // than recording + transcription with external API
+    if (recognitionRef.current) {
+      // Primary method: Use browser speech recognition directly
+      browserTranscriptRef.current = '';
+      setVoiceStatus('🎤 Listening... Say option A, B, C, or D clearly.');
+      setIsListening(true);
+      
+      try {
+        recognitionRef.current.start();
+        
+        // Auto-stop after 5 seconds
+        recordingTimeoutRef.current = window.setTimeout(() => {
+          if (recognitionRef.current && isListening) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+            
+            const text = browserTranscriptRef.current?.trim();
+            if (text) {
+              const answerIndex = parseAnswerIndex(text, currentOptionsRef.current);
+              if (answerIndex !== null) {
+                setVoiceStatus(`✅ Detected option ${String.fromCharCode(65 + answerIndex)}!`);
+              } else {
+                setVoiceStatus('Heard: "' + text + '" - but no option detected. Try again or click your answer.');
+              }
+            } else {
+              setVoiceStatus('No speech detected. Please speak louder and try again.');
+            }
+          }
+        }, 5000);
+        
+        return;
+      } catch (error) {
+        console.warn('Browser speech recognition failed:', error);
+        setVoiceStatus('Speech recognition failed. Please click your answer manually.');
+        setIsListening(false);
+        return;
+      }
+    }
+
+    // Fallback: If browser speech recognition is not available, use MediaRecorder
     if (!navigator.mediaDevices || typeof MediaRecorder === 'undefined') {
-      startBrowserSpeechFallback();
+      setVoiceStatus('Voice recognition not available in this browser. Please click your answer manually.');
       return;
     }
 
@@ -378,20 +483,33 @@ export default function VoiceBasedTest() {
       streamRef.current = stream;
       audioChunksRef.current = [];
 
+      // Prefer formats that ElevenLabs supports well: mp3, mp4, mpeg, mpga, m4a, wav, webm
       const supportedMimeType = [
         'audio/webm;codecs=opus',
         'audio/webm',
         'audio/mp4',
         'audio/mpeg',
+        'audio/wav',
       ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
 
-      const recorder = supportedMimeType
-        ? new MediaRecorder(stream, { mimeType: supportedMimeType })
-        : new MediaRecorder(stream);
+      if (!supportedMimeType) {
+        console.warn('No supported audio MIME type found');
+        throw new Error('Browser does not support audio recording in a compatible format');
+      }
+
+      console.log('Using audio format:', supportedMimeType);
+
+      const recorder = new MediaRecorder(stream, { 
+        mimeType: supportedMimeType,
+        audioBitsPerSecond: 128000 // Higher quality for better transcription
+      });
 
       mediaRecorderRef.current = recorder;
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+        if (event.data.size > 0) {
+          console.log('Audio chunk received:', event.data.size, 'bytes');
+          audioChunksRef.current.push(event.data);
+        }
       };
       recorder.onstop = () => {
         if (recordingTimeoutRef.current) {
@@ -400,37 +518,40 @@ export default function VoiceBasedTest() {
         }
         setIsListening(false);
         stream.getTracks().forEach((track) => track.stop());
+        
         const audioBlob = new Blob(audioChunksRef.current, {
-          type: recorder.mimeType || supportedMimeType || 'audio/webm',
+          type: recorder.mimeType || supportedMimeType,
         });
+        
+        console.log('Recording stopped. Total size:', audioBlob.size, 'bytes, Type:', audioBlob.type);
+        
         if (audioBlob.size === 0) {
-          setVoiceStatus('No voice audio was captured. Please allow microphone access and try again.');
+          setVoiceStatus('No voice audio captured. Please allow microphone access and speak clearly.');
           return;
         }
+        
+        if (audioBlob.size < 1000) {
+          setVoiceStatus('Recording too short. Please speak for at least 1 second.');
+          return;
+        }
+        
         void transcribeWithElevenLabs(audioBlob);
       };
 
-      setVoiceStatus('Listening for 5 seconds. Say option A, B, C, D, or the full answer.');
+      setVoiceStatus('🎤 Recording for 5 seconds... Say option A, B, C, or D clearly.');
       setIsListening(true);
-      recorder.start(250);
-
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch {
-          browserTranscriptRef.current = '';
-        }
-      }
+      recorder.start(100); // Capture in smaller chunks for better quality
 
       recordingTimeoutRef.current = window.setTimeout(() => {
         if (mediaRecorderRef.current?.state === 'recording') {
-          setVoiceStatus('Processing recorded answer...');
+          setVoiceStatus('⏳ Processing your answer...');
           mediaRecorderRef.current.stop();
         }
       }, 5000);
     } catch (error) {
-      console.warn('Microphone recording failed:', error);
-      startBrowserSpeechFallback();
+      console.warn('Microphone access failed:', error);
+      setVoiceStatus('❌ Microphone access denied. Please click your answer manually.');
+      setIsListening(false);
     }
   };
 
@@ -589,6 +710,15 @@ export default function VoiceBasedTest() {
             {voiceStatus}
           </div>
         </div>
+        
+        {/* Helpful Instructions */}
+        {!showExplanation && (
+          <div className="mb-4 rounded-xl border border-blue-400/20 bg-blue-400/10 px-3 py-2 text-xs text-blue-100">
+            <strong>💡 Tip:</strong> Say "Option A", "Option B", "Option C", or "Option D" clearly. 
+            You can also click your answer manually below.
+          </div>
+        )}
+        
         <div className="flex flex-wrap gap-4 justify-center">
         <button
           onClick={isSpeaking ? stopSpeaking : speakQuestion}

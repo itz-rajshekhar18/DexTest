@@ -1,9 +1,9 @@
 import axios from 'axios';
 import type { Question, TestResult, TestSession } from './store';
 
-const IQ_MODEL = process.env.NEXT_PUBLIC_IQ_MODEL || 'openrouter/auto';
-const REPORT_MODEL = process.env.NEXT_PUBLIC_REPORT_MODEL || IQ_MODEL;
-const TTS_MODEL = process.env.NEXT_PUBLIC_TTS_MODEL || 'google/gemini-flash-1.5-8b';
+const IQ_MODEL = process.env.NEXT_PUBLIC_IQ_MODEL || 'gpt-4o-mini';
+const REPORT_MODEL = process.env.NEXT_PUBLIC_REPORT_MODEL || 'gpt-4o-mini';
+const TTS_MODEL = process.env.NEXT_PUBLIC_TTS_MODEL || 'gpt-4o-mini';
 const QUESTION_BATCH_SIZE = 1;
 const QUESTION_GENERATION_MAX_TOKENS = 380;
 const QUESTION_REPAIR_MAX_TOKENS = 420;
@@ -475,6 +475,48 @@ const getAffordableTokenBudget = (error: unknown) => {
   return affordable;
 };
 
+async function callOpenAI(
+  messages: Message[],
+  model: string,
+  maxTokens: number,
+  temperature: number
+): Promise<string> {
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+  
+  if (OPENAI_API_KEY) {
+    try {
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      const content = response.data.choices[0].message.content?.trim();
+      
+      if (!content) {
+        throw new Error('OpenAI returned an empty response.');
+      }
+      
+      return content;
+    } catch (error) {
+      console.error('OpenAI API failed, falling back to OpenRouter:', error);
+    }
+  }
+  
+  // Fallback to OpenRouter
+  return callOpenRouter(messages, model, maxTokens, temperature);
+}
+
 async function callOpenRouter(
   messages: Message[],
   model: string,
@@ -512,7 +554,7 @@ async function callOpenRouterWithBudgetFallback(
   minimumTokens: number = MIN_OPENROUTER_TOKENS
 ): Promise<string> {
   try {
-    return await callOpenRouter(messages, model, maxTokens, temperature);
+    return await callOpenAI(messages, model, maxTokens, temperature);
   } catch (error: unknown) {
     const affordableBudget = getAffordableTokenBudget(error);
 
@@ -529,7 +571,7 @@ async function callOpenRouterWithBudgetFallback(
       throw error;
     }
 
-    return callOpenRouter(messages, model, retryBudget, temperature);
+    return callOpenAI(messages, model, retryBudget, temperature);
   }
 }
 
