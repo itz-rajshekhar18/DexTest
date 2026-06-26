@@ -4,33 +4,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isTestCompleted, useTestStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Volume2, VolumeX, Clock, Brain, ArrowRight, AudioLines } from 'lucide-react';
+import { Mic, Volume2, VolumeX, Clock, Brain, ArrowRight, ArrowLeft, AudioLines } from 'lucide-react';
 import { voiceIQAgent } from '@/lib/aiAgents';
+import { getCachedAudio, putCachedAudio } from '@/lib/audioCache';
+import { playStreamingMp3 } from '@/lib/streamingAudio';
 
-type SpeechRecognitionResultEventLike = {
-  results: {
-    [index: number]: {
-      [index: number]: {
-        transcript: string;
-      };
-    };
-  };
-};
-
-type SpeechRecognitionLike = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: SpeechRecognitionResultEventLike) => void) | null;
-  onerror: ((event?: { error?: string }) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-
-type ElevenLabsWord = {
+type AsrWord = {
   text: string;
   start?: number;
   end?: number;
@@ -38,9 +17,10 @@ type ElevenLabsWord = {
   speaker_id?: string;
 };
 
-type ElevenLabsTranscript = {
+type AsrTranscript = {
   text?: string;
-  words?: ElevenLabsWord[];
+  language?: string;
+  model?: string;
 };
 
 function normalizeSpokenText(text: string) {
@@ -99,20 +79,30 @@ function parseAnswerIndex(text: string, options: string[] = []) {
   return null;
 }
 
+function fileNameForMime(mimeType: string) {
+  if (mimeType.includes('ogg')) return 'student-answer.ogg';
+  if (mimeType.includes('webm')) return 'student-answer.webm';
+  if (mimeType.includes('mp4')) return 'student-answer.mp4';
+  if (mimeType.includes('mpeg')) return 'student-answer.mp3';
+  if (mimeType.includes('wav')) return 'student-answer.wav';
+  return 'student-answer.webm';
+}
+
 export default function VoiceBasedTest() {
   const router = useRouter();
-  const { questions, currentQuestionIndex, addResult, nextQuestion } = useTestStore();
+  const { questions, currentQuestionIndex, addResult, nextQuestion, goToQuestion } = useTestStore();
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(60);
   const [transcript, setTranscript] = useState('');
-  const [segments, setSegments] = useState<ElevenLabsWord[]>([]);
-  const [voiceStatus, setVoiceStatus] = useState('AI voice ready');
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [segments, setSegments] = useState<AsrWord[]>([]);
+  const [voiceStatus, setVoiceStatus] = useState('Preparing question audio...');
   const startTimeRef = useRef(0);
+  // Guards a single navigation per question so a manual click and the timeout
+  // auto-advance can't both fire and skip a question. Reset on question change.
+  const navLockRef = useRef(false);
 
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -120,8 +110,10 @@ export default function VoiceBasedTest() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsUrlRef = useRef<string | null>(null);
   const recordingTimeoutRef = useRef<number | null>(null);
-  const browserTranscriptRef = useRef('');
   const currentOptionsRef = useRef<string[]>([]);
+  // Increments on every speak request; an in-flight (async) request whose token
+  // no longer matches must not start playing, preventing overlapping audio.
+  const playbackTokenRef = useRef(0);
 
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
@@ -143,98 +135,10 @@ export default function VoiceBasedTest() {
   }, [questions.length, router]);
 
   useEffect(() => {
-    // Initialize Speech Recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const browserWindow = window as Window & {
-        webkitSpeechRecognition?: SpeechRecognitionConstructor;
-        SpeechRecognition?: SpeechRecognitionConstructor;
-      };
-      const SpeechRecognition =
-        browserWindow.webkitSpeechRecognition || browserWindow.SpeechRecognition;
-
-      if (!SpeechRecognition) return;
-
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US';
-
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0]?.[0]?.transcript?.toLowerCase() || '';
-        if (!transcript) return;
-        setTranscript(transcript);
-        browserTranscriptRef.current = transcript;
-        const answerIndex = parseAnswerIndex(transcript, currentOptionsRef.current);
-        setSelectedAnswer(answerIndex);
-        setSegments(
-          transcript.split(/\s+/).filter(Boolean).map((word, index) => ({
-            text: word,
-            start: index * 0.35,
-            end: index * 0.35 + 0.3,
-            type: 'word',
-            speaker_id: 'student',
-          }))
-        );
-        setVoiceStatus(
-          answerIndex === null
-            ? 'Browser STT heard speech, but no answer option was detected.'
-            : `Detected option ${String.fromCharCode(65 + answerIndex)} from voice.`
-        );
-
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onerror = (event) => {
-        const error = event?.error || 'unknown';
-        let message = '';
-        
-        switch (error) {
-          case 'network':
-            message = 'Network error - speech recognition needs internet. Click "Answer by Voice" to use microphone recording instead.';
-            break;
-          case 'not-allowed':
-          case 'permission-denied':
-            message = 'Microphone permission denied. Please allow microphone access in your browser settings.';
-            break;
-          case 'no-speech':
-            message = 'No speech detected. Click "Answer by Voice" to try again.';
-            break;
-          case 'aborted':
-            message = 'Speech recognition stopped. Click "Answer by Voice" to try again.';
-            break;
-          case 'audio-capture':
-            message = 'No microphone found. Please connect a microphone and try again.';
-            break;
-          case 'service-not-allowed':
-            message = 'Speech recognition service not available. Using audio recording fallback.';
-            break;
-          default:
-            message = `Speech recognition error (${error}). Click "Answer by Voice" to use audio recording.`;
-        }
-        
-        setVoiceStatus(message);
-        setIsListening(false);
-        
-        // If browser speech fails due to network, we'll use MediaRecorder + ElevenLabs STT instead
-        if (error === 'network' || error === 'service-not-allowed') {
-          console.log('Browser speech recognition unavailable, will use MediaRecorder + ElevenLabs STT on next attempt');
-        }
-      };
-
-      recognitionRef.current.onend = () => {
-        if (mediaRecorderRef.current?.state !== 'recording') {
-          setIsListening(false);
-        }
-      };
-    }
-
-    // Initialize Speech Synthesis
+    // Initialize Speech Synthesis (for the AI reading the question aloud)
     synthRef.current = window.speechSynthesis;
 
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
       if (synthRef.current) {
         synthRef.current.cancel();
       }
@@ -247,6 +151,9 @@ export default function VoiceBasedTest() {
       if (recordingTimeoutRef.current) {
         window.clearTimeout(recordingTimeoutRef.current);
       }
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
@@ -254,16 +161,50 @@ export default function VoiceBasedTest() {
   const speakQuestion = useCallback(async () => {
     if (!currentQuestion) return;
 
+    // Invalidate any earlier in-flight request and stop whatever is playing now.
+    const token = ++playbackTokenRef.current;
+    const isStale = () => token !== playbackTokenRef.current;
+
     synthRef.current?.cancel();
     audioRef.current?.pause();
     setIsSpeaking(true);
-    setVoiceStatus('Generating ElevenLabs AI voice...');
+    setVoiceStatus('Preparing question audio...');
+
+    const cacheKey = `tts-q-${currentQuestion.id}`;
+
+    const playBlob = (blob: Blob) => {
+      if (isStale()) return;
+      if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
+      ttsUrlRef.current = URL.createObjectURL(blob);
+      const audio = new Audio(ttsUrlRef.current);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setIsSpeaking(false);
+        setVoiceStatus('Hold the button and say your answer.');
+      };
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        setVoiceStatus('Audio playback failed. Tap Repeat Question to try again.');
+      };
+      void audio.play();
+    };
+
+    // 1) Reuse previously generated audio for this question (persists across reloads).
+    const cached = await getCachedAudio(cacheKey);
+    if (isStale()) return;
+    if (cached) {
+      setVoiceStatus('Reading the question aloud...');
+      playBlob(cached);
+      return;
+    }
 
     const spokenPrompt = await voiceIQAgent.createSpokenPrompt(
       currentQuestion,
       currentQuestionIndex + 1
     );
+    if (isStale()) return;
 
+    // 2) Generate once, streaming playback in, then store the finished clip.
     try {
       const response = await fetch('/api/elevenlabs/tts', {
         method: 'POST',
@@ -272,30 +213,41 @@ export default function VoiceBasedTest() {
       });
 
       if (!response.ok) {
-        throw new Error('ElevenLabs TTS unavailable');
+        throw new Error('Voice synthesis unavailable');
       }
 
-      const audioBlob = await response.blob();
-      if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
-      ttsUrlRef.current = URL.createObjectURL(audioBlob);
+      if (isStale()) {
+        // A newer question started; cache the audio but don't play it.
+        const blob = await response.blob();
+        void putCachedAudio(cacheKey, blob);
+        return;
+      }
 
-      const audio = new Audio(ttsUrlRef.current);
+      setVoiceStatus('Reading the question aloud...');
+
+      if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
+      const audio = new Audio();
       audioRef.current = audio;
       audio.onended = () => {
         setIsSpeaking(false);
-        setVoiceStatus('AI finished. Student can answer by voice.');
+        setVoiceStatus('Hold the button and say your answer.');
       };
       audio.onerror = () => {
         setIsSpeaking(false);
-        setVoiceStatus('AI voice playback failed. Use repeat to try again.');
+        setVoiceStatus('Audio playback failed. Tap Repeat Question to try again.');
       };
-      await audio.play();
+      ttsUrlRef.current = null; // managed via audio.src by the streaming helper
+
+      const blob = await playStreamingMp3(response, audio);
+      ttsUrlRef.current = audio.src.startsWith('blob:') ? audio.src : null;
+      void putCachedAudio(cacheKey, blob);
     } catch (error) {
       console.warn('Falling back to browser speech synthesis:', error);
 
+      if (isStale()) return;
       if (!synthRef.current) {
         setIsSpeaking(false);
-        setVoiceStatus('TTS unavailable. Read the question on screen.');
+        setVoiceStatus('Audio unavailable. Please read the question on screen.');
         return;
       }
 
@@ -306,7 +258,7 @@ export default function VoiceBasedTest() {
 
       utterance.onend = () => {
         setIsSpeaking(false);
-        setVoiceStatus('AI finished. Student can answer by voice.');
+        setVoiceStatus('Hold the button and say your answer.');
       };
 
       synthRef.current.speak(utterance);
@@ -322,159 +274,67 @@ export default function VoiceBasedTest() {
       synthRef.current.cancel();
     }
     setIsSpeaking(false);
-    setVoiceStatus('AI voice stopped.');
+    setVoiceStatus('Audio stopped.');
   };
 
-  const startBrowserSpeechFallback = () => {
-    if (recognitionRef.current && !isListening) {
-      browserTranscriptRef.current = '';
-      setVoiceStatus('Listening with browser speech recognition...');
-      setIsListening(true);
-      try {
-        recognitionRef.current.start();
-      } catch (error) {
-        console.warn('Speech recognition start failed:', error);
-        setVoiceStatus('Voice recognition already active or unavailable. Speak now, then try again if needed.');
-      }
-      return true;
-    }
-
-    setVoiceStatus('Voice recognition not available. Click "Answer by Voice" to record audio instead.');
-    return false;
-  };
-
-  const transcribeWithElevenLabs = async (audioBlob: Blob) => {
+  const transcribeAnswer = async (audioBlob: Blob, fileName: string) => {
     setVoiceStatus('🔄 Transcribing your answer...');
 
-    // First, check if we have browser transcription from parallel processing
-    const browserText = browserTranscriptRef.current?.trim();
-    
-    // Try ElevenLabs STT with proper audio format
     try {
-      // Convert audio to supported format if needed
-      let audioFile = audioBlob;
-      let fileName = 'student-answer.webm';
-      
-      // Check if we need to convert the format
-      const mimeType = audioBlob.type;
-      console.log('Original audio format:', mimeType, 'Size:', audioBlob.size);
-      
-      // ElevenLabs accepts: mp3, mp4, mpeg, mpga, m4a, wav, webm
-      if (audioBlob.size < 1000) {
-        console.warn('Audio file too small, likely empty recording');
-        throw new Error('Audio recording too short or empty');
-      }
-
       const formData = new FormData();
-      formData.append('file', audioFile, fileName);
+      formData.append('file', audioBlob, fileName);
 
-      const response = await fetch('/api/elevenlabs/stt', {
+      const response = await fetch('/api/asr', {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.warn('ElevenLabs STT failed:', response.status, errorData);
-        throw new Error(`ElevenLabs STT failed with status ${response.status}`);
+        console.warn('ASR failed:', response.status, errorData);
+        throw new Error(`ASR failed with status ${response.status}`);
       }
 
-      const payload = (await response.json()) as ElevenLabsTranscript;
-      const aiText = payload.text?.trim() || '';
-      
-      // Prefer AI transcription, fallback to browser
-      const text = aiText || browserText;
-      
+      const payload = (await response.json()) as AsrTranscript;
+      const text = payload.text?.trim() || '';
+
       if (!text) {
-        setVoiceStatus('❌ No speech detected. Please speak louder and try again.');
+        setVoiceStatus('❌ No speech detected. Hold the button and speak clearly.');
         return;
       }
 
       const answerIndex = parseAnswerIndex(text, currentOptionsRef.current);
 
       setTranscript(text);
-      setSegments(payload.words || []);
+      setSegments(
+        text
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((word) => ({ text: word, type: 'word', speaker_id: 'student' }))
+      );
       setSelectedAnswer(answerIndex);
-      
+
       if (answerIndex === null) {
-        setVoiceStatus('✅ Heard: "' + text + '" - but no A/B/C/D option detected. Try saying just the letter.');
+        setVoiceStatus('✅ Heard: "' + text + '" — but no A/B/C/D option detected. Try saying just the letter.');
       } else {
         setVoiceStatus(`✅ Detected option ${String.fromCharCode(65 + answerIndex)} from your voice!`);
       }
     } catch (error) {
-      console.warn('ElevenLabs STT unavailable, using browser transcription:', error);
-      
-      // If we have browser transcription from parallel processing, use it
-      if (browserText) {
-        const browserAnswer = parseAnswerIndex(browserText, currentOptionsRef.current);
-        setTranscript(browserText);
-        setSelectedAnswer(browserAnswer);
-        
-        if (browserAnswer === null) {
-          setVoiceStatus('📝 Heard: "' + browserText + '" - but no option detected. Click your answer or say the letter clearly.');
-        } else {
-          setVoiceStatus(`✅ Detected option ${String.fromCharCode(65 + browserAnswer)} from browser voice!`);
-        }
-        return;
-      }
-      
-      // If no browser transcription, inform user
-      setVoiceStatus('🎤 AI transcription unavailable. Using browser speech recognition. Please say your answer again or click your choice.');
+      console.warn('ASR unavailable:', error);
+      setVoiceStatus('🎤 Transcription failed. Please try again or click your answer.');
     }
   };
 
-  const startListening = async () => {
-    if (isListening || showExplanation) return;
+  const startRecording = async () => {
+    if (isListening) return;
 
     stopSpeaking();
     setTranscript('');
     setSegments([]);
     setSelectedAnswer(null);
-    browserTranscriptRef.current = '';
 
-    // For this use case (detecting A/B/C/D), browser speech recognition is actually more reliable
-    // than recording + transcription with external API
-    if (recognitionRef.current) {
-      // Primary method: Use browser speech recognition directly
-      browserTranscriptRef.current = '';
-      setVoiceStatus('🎤 Listening... Say option A, B, C, or D clearly.');
-      setIsListening(true);
-      
-      try {
-        recognitionRef.current.start();
-        
-        // Auto-stop after 5 seconds
-        recordingTimeoutRef.current = window.setTimeout(() => {
-          if (recognitionRef.current && isListening) {
-            recognitionRef.current.stop();
-            setIsListening(false);
-            
-            const text = browserTranscriptRef.current?.trim();
-            if (text) {
-              const answerIndex = parseAnswerIndex(text, currentOptionsRef.current);
-              if (answerIndex !== null) {
-                setVoiceStatus(`✅ Detected option ${String.fromCharCode(65 + answerIndex)}!`);
-              } else {
-                setVoiceStatus('Heard: "' + text + '" - but no option detected. Try again or click your answer.');
-              }
-            } else {
-              setVoiceStatus('No speech detected. Please speak louder and try again.');
-            }
-          }
-        }, 5000);
-        
-        return;
-      } catch (error) {
-        console.warn('Browser speech recognition failed:', error);
-        setVoiceStatus('Speech recognition failed. Please click your answer manually.');
-        setIsListening(false);
-        return;
-      }
-    }
-
-    // Fallback: If browser speech recognition is not available, use MediaRecorder
     if (!navigator.mediaDevices || typeof MediaRecorder === 'undefined') {
-      setVoiceStatus('Voice recognition not available in this browser. Please click your answer manually.');
+      setVoiceStatus('Voice recording not supported in this browser. Please click your answer manually.');
       return;
     }
 
@@ -483,31 +343,27 @@ export default function VoiceBasedTest() {
       streamRef.current = stream;
       audioChunksRef.current = [];
 
-      // Prefer formats that ElevenLabs supports well: mp3, mp4, mpeg, mpga, m4a, wav, webm
-      const supportedMimeType = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/mp4',
-        'audio/mpeg',
-        'audio/wav',
-      ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+      const supportedMimeType =
+        [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/ogg;codecs=opus',
+          'audio/ogg',
+          'audio/mp4',
+          'audio/mpeg',
+          'audio/wav',
+        ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || '';
 
-      if (!supportedMimeType) {
-        console.warn('No supported audio MIME type found');
-        throw new Error('Browser does not support audio recording in a compatible format');
-      }
-
-      console.log('Using audio format:', supportedMimeType);
-
-      const recorder = new MediaRecorder(stream, { 
-        mimeType: supportedMimeType,
-        audioBitsPerSecond: 128000 // Higher quality for better transcription
-      });
+      const recorder = new MediaRecorder(
+        stream,
+        supportedMimeType
+          ? { mimeType: supportedMimeType, audioBitsPerSecond: 128000 }
+          : undefined
+      );
 
       mediaRecorderRef.current = recorder;
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log('Audio chunk received:', event.data.size, 'bytes');
           audioChunksRef.current.push(event.data);
         }
       };
@@ -518,36 +374,29 @@ export default function VoiceBasedTest() {
         }
         setIsListening(false);
         stream.getTracks().forEach((track) => track.stop());
-        
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: recorder.mimeType || supportedMimeType,
-        });
-        
-        console.log('Recording stopped. Total size:', audioBlob.size, 'bytes, Type:', audioBlob.type);
-        
-        if (audioBlob.size === 0) {
-          setVoiceStatus('No voice audio captured. Please allow microphone access and speak clearly.');
-          return;
-        }
-        
+
+        const mimeType = recorder.mimeType || supportedMimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+
         if (audioBlob.size < 1000) {
-          setVoiceStatus('Recording too short. Please speak for at least 1 second.');
+          setVoiceStatus('Recording too short. Hold the button while you say your answer.');
           return;
         }
-        
-        void transcribeWithElevenLabs(audioBlob);
+
+        void transcribeAnswer(audioBlob, fileNameForMime(mimeType));
       };
 
-      setVoiceStatus('🎤 Recording for 5 seconds... Say option A, B, C, or D clearly.');
+      setVoiceStatus('🎤 Listening... keep holding and say option A, B, C, or D.');
       setIsListening(true);
-      recorder.start(100); // Capture in smaller chunks for better quality
+      recorder.start(100); // capture in small chunks for quality
 
+      // Safety stop so a stuck "press" can't record forever.
       recordingTimeoutRef.current = window.setTimeout(() => {
         if (mediaRecorderRef.current?.state === 'recording') {
           setVoiceStatus('⏳ Processing your answer...');
           mediaRecorderRef.current.stop();
         }
-      }, 5000);
+      }, 15000);
     } catch (error) {
       console.warn('Microphone access failed:', error);
       setVoiceStatus('❌ Microphone access denied. Please click your answer manually.');
@@ -555,83 +404,93 @@ export default function VoiceBasedTest() {
     }
   };
 
-  const stopListening = () => {
-    if (recordingTimeoutRef.current) {
-      window.clearTimeout(recordingTimeoutRef.current);
-      recordingTimeoutRef.current = null;
-    }
-
+  const stopRecording = () => {
     if (mediaRecorderRef.current?.state === 'recording') {
-      setVoiceStatus('Processing recorded answer...');
+      setVoiceStatus('⏳ Processing your answer...');
       mediaRecorderRef.current.stop();
-      recognitionRef.current?.stop();
-      return;
-    }
-
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
     }
   };
 
-  const handleSubmit = useCallback(() => {
-    if (selectedAnswer === null || !currentQuestion || showExplanation) return;
+  // Hold the Space bar to talk (mirrors the "Hold to Talk" button).
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || event.repeat) return;
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+      event.preventDefault();
+      if (!isListening) void startRecording();
+    };
 
-    const reactionTime = Date.now() - startTimeRef.current;
-    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code !== 'Space') return;
+      event.preventDefault();
+      if (isListening) stopRecording();
+    };
 
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isListening]);
+
+  // Save the current selection (upsert) so it survives navigating away/back.
+  const persistCurrentAnswer = useCallback(() => {
+    if (selectedAnswer === null || !currentQuestion) return;
     addResult({
       questionId: currentQuestion.id,
       selectedAnswer,
-      isCorrect,
-      reactionTime,
+      isCorrect: selectedAnswer === currentQuestion.correctAnswer,
+      reactionTime: Date.now() - startTimeRef.current,
       timestamp: new Date(),
     });
+  }, [addResult, currentQuestion, selectedAnswer]);
 
-    setShowExplanation(true);
+  // Move to another question, saving the current answer first. The nav lock
+  // ensures only one transition happens per question.
+  const goToIndex = useCallback(
+    (target: number) => {
+      if (navLockRef.current) return;
+      if (target < 0 || target >= questions.length) return;
+      navLockRef.current = true;
+      persistCurrentAnswer();
+      stopSpeaking();
+      goToQuestion(target);
+    },
+    [goToQuestion, persistCurrentAnswer, questions.length]
+  );
 
-    const resultText = isCorrect
-      ? 'Correct! ' + currentQuestion.explanation
-      : 'Incorrect. The correct answer is option ' +
-        String.fromCharCode(65 + currentQuestion.correctAnswer) +
-        '. ' +
-        currentQuestion.explanation;
-
-    void (async () => {
-      try {
-        const response = await fetch('/api/elevenlabs/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: resultText }),
-        });
-
-        if (!response.ok) throw new Error('ElevenLabs feedback TTS unavailable');
-
-        const audioBlob = await response.blob();
-        if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
-        ttsUrlRef.current = URL.createObjectURL(audioBlob);
-        const audio = new Audio(ttsUrlRef.current);
-        audioRef.current = audio;
-        await audio.play();
-      } catch {
-        if (synthRef.current) {
-          const utterance = new SpeechSynthesisUtterance(resultText);
-          utterance.rate = 0.9;
-          synthRef.current.speak(utterance);
-        }
-      }
-    })();
-  }, [addResult, currentQuestion, selectedAnswer, showExplanation]);
+  // Submit the current answer and go straight to the next question (or results).
+  const handleSubmitNext = useCallback(() => {
+    if (navLockRef.current) return;
+    navLockRef.current = true;
+    persistCurrentAnswer();
+    stopSpeaking();
+    if (isLastQuestion) {
+      router.push('/test/results');
+    } else {
+      nextQuestion();
+    }
+  }, [isLastQuestion, nextQuestion, persistCurrentAnswer, router]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      navLockRef.current = false;
       setTimeLeft(currentQuestion?.timeLimit || 60);
       startTimeRef.current = Date.now();
-      setSelectedAnswer(null);
-      setShowExplanation(false);
+      // Restore any previously chosen answer for this question (back/forth nav).
+      const existing = useTestStore
+        .getState()
+        .results.find((result) => result.questionId === currentQuestion?.id);
+      setSelectedAnswer(
+        existing && existing.selectedAnswer >= 0 ? existing.selectedAnswer : null
+      );
       setTranscript('');
       setSegments([]);
-      setVoiceStatus('AI voice ready');
+      setVoiceStatus('Preparing question audio...');
       speakQuestion();
     }, 0);
 
@@ -640,7 +499,8 @@ export default function VoiceBasedTest() {
 
   useEffect(() => {
     if (timeLeft <= 0) {
-      const submitTimer = window.setTimeout(() => handleSubmit(), 0);
+      // Time's up: auto-advance (recording the current selection if any).
+      const submitTimer = window.setTimeout(() => handleSubmitNext(), 0);
       return () => window.clearTimeout(submitTimer);
     }
 
@@ -649,16 +509,7 @@ export default function VoiceBasedTest() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [handleSubmit, timeLeft]);
-
-  const handleNext = () => {
-    stopSpeaking();
-    if (isLastQuestion) {
-      router.push('/test/results');
-    } else {
-      nextQuestion();
-    }
-  };
+  }, [handleSubmitNext, timeLeft]);
 
   if (!currentQuestion) {
     return (
@@ -710,15 +561,14 @@ export default function VoiceBasedTest() {
             {voiceStatus}
           </div>
         </div>
-        
+
         {/* Helpful Instructions */}
-        {!showExplanation && (
-          <div className="mb-4 rounded-xl border border-blue-400/20 bg-blue-400/10 px-3 py-2 text-xs text-blue-100">
-            <strong>💡 Tip:</strong> Say "Option A", "Option B", "Option C", or "Option D" clearly. 
-            You can also click your answer manually below.
-          </div>
-        )}
-        
+        <div className="mb-4 rounded-xl border border-blue-400/20 bg-blue-400/10 px-3 py-2 text-xs text-blue-100">
+          <strong>💡 Tip:</strong> Press and hold &quot;Hold to Talk&quot; (or hold the <kbd>Space</kbd> bar),
+          say &quot;Option A&quot;, &quot;Option B&quot;, &quot;Option C&quot;, or &quot;Option D&quot;, then release.
+          You can also click your answer manually below.
+        </div>
+
         <div className="flex flex-wrap gap-4 justify-center">
         <button
           onClick={isSpeaking ? stopSpeaking : speakQuestion}
@@ -742,25 +592,28 @@ export default function VoiceBasedTest() {
         </button>
 
         <button
-          onClick={isListening ? stopListening : startListening}
-          disabled={showExplanation}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+          onMouseDown={startRecording}
+          onMouseUp={stopRecording}
+          onMouseLeave={() => {
+            if (isListening) stopRecording();
+          }}
+          onTouchStart={(event) => {
+            event.preventDefault();
+            void startRecording();
+          }}
+          onTouchEnd={(event) => {
+            event.preventDefault();
+            stopRecording();
+          }}
+          onContextMenu={(event) => event.preventDefault()}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all select-none touch-none ${
             isListening
               ? 'bg-red-600 hover:bg-red-700 animate-pulse'
               : 'bg-green-600 hover:bg-green-700'
-          } disabled:bg-zinc-800 disabled:cursor-not-allowed`}
+          }`}
         >
-          {isListening ? (
-            <>
-              <MicOff className="w-5 h-5" />
-              Stop Listening
-            </>
-          ) : (
-            <>
-              <Mic className="w-5 h-5" />
-              Answer by Voice
-            </>
-          )}
+          <Mic className="w-5 h-5" />
+          {isListening ? 'Listening… release to submit' : 'Hold to Talk'}
         </button>
         </div>
       </div>
@@ -810,16 +663,11 @@ export default function VoiceBasedTest() {
               {currentQuestion.options.map((option, index) => (
                 <motion.button
                   key={index}
-                  onClick={() => !showExplanation && setSelectedAnswer(index)}
-                  disabled={showExplanation}
-                  whileHover={{ scale: showExplanation ? 1 : 1.02 }}
-                  whileTap={{ scale: showExplanation ? 1 : 0.98 }}
+                  onClick={() => setSelectedAnswer(index)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                    showExplanation && index === currentQuestion.correctAnswer
-                      ? 'border-green-500 bg-green-500/20'
-                      : showExplanation && index === selectedAnswer
-                      ? 'border-red-500 bg-red-500/20'
-                      : selectedAnswer === index
+                    selectedAnswer === index
                       ? 'border-purple-500 bg-purple-500/20'
                       : 'border-zinc-800 bg-zinc-900/40 hover:border-zinc-700'
                   }`}
@@ -838,23 +686,23 @@ export default function VoiceBasedTest() {
 
             {/* Action Buttons */}
             <div className="flex gap-4">
-              {!showExplanation ? (
-                <button
-                  onClick={handleSubmit}
-                  disabled={selectedAnswer === null}
-                  className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
-                >
-                  Submit Answer
-                </button>
-              ) : (
-                <button
-                  onClick={handleNext}
-                  className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  {isLastQuestion ? 'View Results' : 'Next Question'}
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              )}
+              <button
+                onClick={() => goToIndex(currentQuestionIndex - 1)}
+                disabled={currentQuestionIndex === 0}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Previous
+              </button>
+
+              <button
+                onClick={handleSubmitNext}
+                disabled={selectedAnswer === null}
+                className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                {isLastQuestion ? 'Submit & View Results' : 'Submit & Next'}
+                <ArrowRight className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </motion.div>

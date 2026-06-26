@@ -56,16 +56,17 @@ export async function POST(request: NextRequest) {
     }
   );
 
-  if (!response.ok) {
-    const details = await response.text();
+  if (!response.ok || !response.body) {
+    const details = response.body ? await response.text() : "No audio stream.";
     return NextResponse.json(
-      { error: "ElevenLabs TTS failed.", details },
-      { status: response.status }
+      { error: "Voice synthesis failed.", details },
+      { status: response.ok ? 502 : response.status }
     );
   }
 
-  const audio = await response.arrayBuffer();
-  return new NextResponse(audio, {
+  // Pipe the upstream audio straight through so playback can start while the
+  // rest of the clip is still being generated.
+  return new NextResponse(response.body, {
     headers: {
       "Content-Type": "audio/mpeg",
       "Cache-Control": "no-store",

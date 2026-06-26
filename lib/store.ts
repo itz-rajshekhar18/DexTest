@@ -419,6 +419,7 @@ interface TestState {
   setQuestions: (questions: Question[]) => void;
   addResult: (result: TestResult) => void;
   nextQuestion: () => void;
+  goToQuestion: (index: number) => void;
   updateGameScore: (game: 'templeRun' | 'memoryGame' | 'reflexGame', score: number, reactionTime: number) => void;
   setCameraEnabled: (enabled: boolean) => void;
   updateAttentionScore: (score: number) => void;
@@ -475,13 +476,31 @@ export const useTestStore = create<TestState>((set) => ({
   
   addResult: (result) =>
     set((state) => {
-      const nextState = { ...state, results: [...state.results, result] };
-      persistProgressCache(nextState);
-      return { results: nextState.results };
+      // Upsert by question so revisiting/changing an answer replaces it
+      // instead of recording a duplicate.
+      const existingIndex = state.results.findIndex(
+        (existing) => existing.questionId === result.questionId
+      );
+      const results =
+        existingIndex >= 0
+          ? state.results.map((existing, index) =>
+              index === existingIndex ? result : existing
+            )
+          : [...state.results, result];
+      persistProgressCache({ ...state, results });
+      return { results };
     }),
-  
+
   nextQuestion: () =>
     set((state) => ({ currentQuestionIndex: state.currentQuestionIndex + 1 })),
+
+  goToQuestion: (index) =>
+    set((state) => ({
+      currentQuestionIndex: Math.max(
+        0,
+        Math.min(index, Math.max(0, state.questions.length - 1))
+      ),
+    })),
   
   updateGameScore: (game, score, reactionTime) =>
     set((state) => {
