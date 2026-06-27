@@ -12,7 +12,6 @@ import {
   getLatestTestSession,
   getPreviousAttemptSnapshot,
   getStudentProfile,
-  getTestSessions,
   savePreviousAttemptSnapshot,
   clearPreviousAttemptSnapshot,
   type StudentProfile,
@@ -47,6 +46,7 @@ export default function TestSelectionPage() {
     setStudentInfo,
     setTestType,
     setQuestions,
+    setQuestionsLoading,
     resetTest,
   } = useTestStore();
 
@@ -160,15 +160,8 @@ export default function TestSelectionPage() {
     };
   };
 
-  const getPreviousQuestionTexts = (testType?: TestType) => {
-    return getTestSessions()
-      .filter((session) => !testType || session.testType === testType)
-      .flatMap((session) => session.questions || [])
-      .map((question) => question.question)
-      .filter(Boolean);
-  };
-
   const handleStartTest = async (type: 'text' | 'voice' | 'game') => {
+    // A completed test is locked and cannot be retaken.
     if (completedTests[type]) {
       if (allTestsCompleted) {
         router.push('/test/results');
@@ -181,46 +174,34 @@ export default function TestSelectionPage() {
     resetTest();
     setTestType(type);
 
+    if (type === 'game') {
+      router.push('/test/games');
+      return;
+    }
+
+    // Navigate to the test page first so the question-generation loader is shown
+    // there, then generate the questions in the background.
+    setQuestionsLoading(true);
+    router.push(type === 'text' ? '/test/text-test' : '/test/voice-test');
+
     try {
       const profile = await resolveStudentProfile();
 
       if (type === 'text') {
-        // This seed must be new on each user-started attempt to prevent repeated AI questions.
-        // eslint-disable-next-line react-hooks/purity
-        const uniquenessSeed = `text-${profile.studentCode || 'guest'}-${Date.now()}-${crypto.randomUUID()}`;
         const questions = await writtenIQAgent.generateTest({
           classLevel: profile.studentClass,
-          questionType: 'logical',
           count: 10,
-          studentAge: profile.studentAge,
-          studentGender: profile.studentGender,
-          previousQuestions: getPreviousQuestionTexts('text'),
-          uniquenessSeed,
         });
         setQuestions(questions);
-        router.push('/test/text-test');
-      } else if (type === 'voice') {
-        // This seed must be new on each user-started attempt to prevent repeated AI questions.
-        // eslint-disable-next-line react-hooks/purity
-        const uniquenessSeed = `voice-${profile.studentCode || 'guest'}-${Date.now()}-${crypto.randomUUID()}`;
-        const questions = await voiceIQAgent.generateVoiceQuestions(
-          profile.studentClass,
-          10,
-          profile.studentAge,
-          profile.studentGender,
-          getPreviousQuestionTexts('voice'),
-          uniquenessSeed
-        );
-        setQuestions(questions);
-        router.push('/test/voice-test');
       } else {
-        router.push('/test/games');
+        const questions = await voiceIQAgent.generateVoiceQuestions(profile.studentClass, 10);
+        setQuestions(questions);
       }
     } catch (error) {
       console.error('Error starting test:', error);
+      setQuestionsLoading(false);
       alert('Failed to generate questions. Please try again.');
-      setLoading(false);
-      setSelectedType(null);
+      router.replace('/test');
     }
   };
 

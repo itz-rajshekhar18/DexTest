@@ -79,6 +79,16 @@ function parseAnswerIndex(text: string, options: string[] = []) {
   return null;
 }
 
+// Stable, content-based key for the audio cache (FNV-1a hash → base36).
+function hashText(text: string) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 function fileNameForMime(mimeType: string) {
   if (mimeType.includes('ogg')) return 'student-answer.ogg';
   if (mimeType.includes('webm')) return 'student-answer.webm';
@@ -122,17 +132,13 @@ export default function VoiceBasedTest() {
     currentOptionsRef.current = currentQuestion?.options || [];
   }, [currentQuestion?.options]);
 
+  // A completed Voice test is locked: if it was already taken, send the user
+  // back to the test selection page.
   useEffect(() => {
     if (isTestCompleted('voice')) {
       router.replace('/test');
     }
   }, [router]);
-
-  useEffect(() => {
-    if (!isTestCompleted('voice') && questions.length === 0) {
-      router.replace('/test');
-    }
-  }, [questions.length, router]);
 
   useEffect(() => {
     // Initialize Speech Synthesis (for the AI reading the question aloud)
@@ -170,7 +176,14 @@ export default function VoiceBasedTest() {
     setIsSpeaking(true);
     setVoiceStatus('Preparing question audio...');
 
-    const cacheKey = `tts-q-${currentQuestion.id}`;
+    // The spoken script is built synchronously from the question. We key the
+    // audio cache by the actual text (not the question id) so a reused id like
+    // "q1" never replays an unrelated question's audio from a previous attempt.
+    const spokenPrompt = voiceIQAgent.createSpokenPrompt(
+      currentQuestion,
+      currentQuestionIndex + 1
+    );
+    const cacheKey = `tts-${hashText(spokenPrompt)}`;
 
     const playBlob = (blob: Blob) => {
       if (isStale()) return;
@@ -197,12 +210,6 @@ export default function VoiceBasedTest() {
       playBlob(cached);
       return;
     }
-
-    const spokenPrompt = await voiceIQAgent.createSpokenPrompt(
-      currentQuestion,
-      currentQuestionIndex + 1
-    );
-    if (isStale()) return;
 
     // 2) Generate once, streaming playback in, then store the finished clip.
     try {

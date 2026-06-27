@@ -148,17 +148,24 @@ export async function POST(request: Request) {
       max_tokens?: number;
     };
 
-    if (!body.model || !Array.isArray(body.messages) || body.messages.length === 0) {
+    if (!Array.isArray(body.messages) || body.messages.length === 0) {
       return NextResponse.json(
         { error: 'Invalid OpenRouter request payload.' },
         { status: 400 }
       );
     }
 
+    // When the caller doesn't specify a model, use the same model as question
+    // generation (QUESTION_MODEL in .env.local) so reports stay in sync.
+    const model =
+      body.model ||
+      getRuntimeEnvValue(['QUESTION_MODEL', 'NEXT_PUBLIC_QUESTION_MODEL']) ||
+      'qwen/qwen3.5-9b';
+
     const response = await axios.post<OpenRouterResponse>(
       OPENROUTER_API_URL,
       {
-        model: body.model,
+        model,
         messages: body.messages,
         temperature: body.temperature ?? 0.7,
         max_tokens: body.max_tokens ?? 1200,

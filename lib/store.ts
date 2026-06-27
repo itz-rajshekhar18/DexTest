@@ -400,7 +400,9 @@ interface TestState {
   testType: TestType | null;
   currentQuestionIndex: number;
   questions: Question[];
-  
+  // True while a fresh question set is being generated for the active test.
+  questionsLoading: boolean;
+
   // Test results
   results: TestResult[];
   gameScores: {
@@ -417,6 +419,7 @@ interface TestState {
   setStudentInfo: (code: string, classLevel: number, name: string, age?: number, gender?: string) => void;
   setTestType: (type: TestType) => void;
   setQuestions: (questions: Question[]) => void;
+  setQuestionsLoading: (loading: boolean) => void;
   addResult: (result: TestResult) => void;
   nextQuestion: () => void;
   goToQuestion: (index: number) => void;
@@ -437,6 +440,7 @@ export const useTestStore = create<TestState>((set) => ({
   testType: null,
   currentQuestionIndex: 0,
   questions: [],
+  questionsLoading: false,
   results: [],
   gameScores: {
     templeRun: null,
@@ -471,9 +475,11 @@ export const useTestStore = create<TestState>((set) => ({
     set((state) => {
       const nextState = { ...state, questions, currentQuestionIndex: 0 };
       persistProgressCache(nextState);
-      return { questions, currentQuestionIndex: 0 };
+      return { questions, currentQuestionIndex: 0, questionsLoading: false };
     }),
-  
+
+  setQuestionsLoading: (loading) => set(() => ({ questionsLoading: loading })),
+
   addResult: (result) =>
     set((state) => {
       // Upsert by question so revisiting/changing an answer replaces it
@@ -530,6 +536,7 @@ export const useTestStore = create<TestState>((set) => ({
         testType: null,
         currentQuestionIndex: 0,
         questions: [],
+        questionsLoading: false,
         results: [],
         gameScores: {
           templeRun: null,
@@ -543,6 +550,7 @@ export const useTestStore = create<TestState>((set) => ({
         testType: null,
         currentQuestionIndex: 0,
         questions: [],
+        questionsLoading: false,
         results: [],
         gameScores: {
           templeRun: null,

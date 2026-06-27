@@ -1,0 +1,1853 @@
+{
+  "easy": [
+    {
+      "question": "What comes next in this pattern? 2, 4, 6, 8, ...",
+      "options": ["9", "10", "11", "12"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Each term increases by 2, so after 8 comes 10."
+    },
+    {
+      "question": "Which word is the odd one out? Apple, Banana, Carrot, Mango.",
+      "options": ["Apple", "Banana", "Carrot", "Mango"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Carrot is a vegetable, while the others are fruits."
+    },
+    {
+      "question": "If today is Monday, what day will it be in 3 days?",
+      "options": ["Tuesday", "Wednesday", "Thursday", "Friday"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Monday plus 3 days equals Thursday."
+    },
+    {
+      "question": "A cat has 4 legs. How many legs do 3 cats have in total?",
+      "options": ["8", "10", "12", "14"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "3 cats multiplied by 4 legs each equals 12 legs."
+    },
+    {
+      "question": "Which shape has 3 sides?",
+      "options": ["Square", "Circle", "Triangle", "Rectangle"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A triangle has exactly 3 sides."
+    },
+    {
+      "question": "What is the opposite of hot?",
+      "options": ["Warm", "Cool", "Cold", "Freezing"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Cold is the direct opposite of hot."
+    },
+    {
+      "question": "If you have 10 apples and give away 4, how many do you have left?",
+      "options": ["4", "5", "6", "7"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "10 minus 4 equals 6 apples remaining."
+    },
+    {
+      "question": "Which of these animals can fly? Dog, Cat, Parrot, or Fish?",
+      "options": ["Dog", "Cat", "Parrot", "Fish"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A parrot is a bird and can fly; dogs, cats, and fish cannot."
+    },
+    {
+      "question": "What comes after 99?",
+      "options": ["90", "98", "100", "110"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "The number that comes directly after 99 is 100."
+    },
+    {
+      "question": "Which letter comes after D in the alphabet?",
+      "options": ["C", "B", "F", "E"],
+      "correctAnswer": 3,
+      "difficulty": "easy",
+      "explanation": "The alphabet goes A, B, C, D, E, so E comes after D."
+    },
+    {
+      "question": "A week has how many days?",
+      "options": ["5", "6", "7", "8"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A week has exactly 7 days."
+    },
+    {
+      "question": "Which of these is a colour? Elephant, Blue, Run, Quickly.",
+      "options": ["Elephant", "Blue", "Run", "Quickly"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Blue is a colour; the others are a noun, a verb, and an adverb."
+    },
+    {
+      "question": "What is 5 plus 5?",
+      "options": ["8", "9", "10", "11"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "5 plus 5 equals 10."
+    },
+    {
+      "question": "Which animal says moo?",
+      "options": ["Dog", "Cat", "Cow", "Horse"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A cow makes the sound moo."
+    },
+    {
+      "question": "Which of these is the largest? Ant, Elephant, Dog, Cat.",
+      "options": ["Ant", "Elephant", "Dog", "Cat"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "An elephant is by far the largest of these animals."
+    },
+    {
+      "question": "What is 3 times 4?",
+      "options": ["7", "10", "12", "14"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "3 multiplied by 4 equals 12."
+    },
+    {
+      "question": "Which planet do we live on?",
+      "options": ["Mars", "Jupiter", "Earth", "Saturn"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "We live on planet Earth."
+    },
+    {
+      "question": "How many months are in a year?",
+      "options": ["10", "11", "12", "13"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "There are 12 months in a year."
+    },
+    {
+      "question": "What is the first letter of the word B I R D?",
+      "options": ["I", "B", "R", "D"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "The word B I R D begins with the letter B."
+    },
+    {
+      "question": "Which of these is a fruit? Potato, Tomato, Onion, Garlic.",
+      "options": ["Potato", "Tomato", "Onion", "Garlic"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Botanically, a tomato is a fruit because it contains seeds."
+    },
+    {
+      "question": "What comes next? Sunday, Monday, Tuesday, ...",
+      "options": ["Thursday", "Friday", "Wednesday", "Saturday"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "After Tuesday comes Wednesday in the week."
+    },
+    {
+      "question": "If a pizza is cut into 8 equal slices and you eat 2, how many slices are left?",
+      "options": ["4", "5", "6", "7"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "8 minus 2 equals 6 slices remaining."
+    },
+    {
+      "question": "Which of these floats on water? Stone, Coin, Wood, Metal.",
+      "options": ["Stone", "Coin", "Wood", "Metal"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Wood is less dense than water and therefore floats."
+    },
+    {
+      "question": "What is half of 20?",
+      "options": ["5", "8", "10", "12"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Half of 20 is 10."
+    },
+    {
+      "question": "Which sense do we use our eyes for?",
+      "options": ["Hearing", "Smell", "Sight", "Taste"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "We use our eyes for the sense of sight."
+    },
+    {
+      "question": "What is 20 minus 8?",
+      "options": ["10", "11", "12", "13"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "20 minus 8 equals 12."
+    },
+    {
+      "question": "How many corners does a square have?",
+      "options": ["2", "3", "4", "5"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A square has exactly 4 corners."
+    },
+    {
+      "question": "Which of these is a number? Seven, Blue, Run, Happy.",
+      "options": ["Seven", "Blue", "Run", "Happy"],
+      "correctAnswer": 0,
+      "difficulty": "easy",
+      "explanation": "Seven is a number; the others are a colour, a verb, and an adjective."
+    },
+    {
+      "question": "What do you use to write on paper?",
+      "options": ["Spoon", "Pen", "Fork", "Brush"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "A pen is the tool used for writing on paper."
+    },
+    {
+      "question": "Which number is missing? 10, 20, 30, __, 50.",
+      "options": ["35", "40", "42", "45"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "The pattern increases by 10 each time, so the missing number is 40."
+    },
+    {
+      "question": "What is the color of the sky on a clear day?",
+      "options": ["Green", "Red", "Blue", "Yellow"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "The sky appears blue on a clear sunny day."
+    },
+    {
+      "question": "Which of these is a season? Monday, Winter, North, Happy.",
+      "options": ["Monday", "Winter", "North", "Happy"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Winter is one of the four seasons."
+    },
+    {
+      "question": "How many wheels does a bicycle have?",
+      "options": ["1", "2", "3", "4"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "A bicycle has 2 wheels."
+    },
+    {
+      "question": "What is 9 plus 6?",
+      "options": ["13", "14", "15", "16"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "9 plus 6 equals 15."
+    },
+    {
+      "question": "If there are 5 birds on a wire and 2 fly away, how many are left?",
+      "options": ["1", "2", "3", "4"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "5 minus 2 equals 3 birds remaining."
+    },
+    {
+      "question": "Which of these is a plant? Tiger, Rose, Eagle, Shark.",
+      "options": ["Tiger", "Rose", "Eagle", "Shark"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "A rose is a plant; the others are all animals."
+    },
+    {
+      "question": "What is the third letter in the word C A T?",
+      "options": ["C", "A", "T", "S"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "The letters in C A T are C, A, T. The third letter is T."
+    },
+    {
+      "question": "Which is heavier, 1 kilogram of feathers or 1 kilogram of iron?",
+      "options": ["Feathers", "Iron", "They weigh the same", "It depends"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Both weigh exactly 1 kilogram, so they are the same weight."
+    },
+    {
+      "question": "What comes next? 1, 3, 5, 7, ...",
+      "options": ["8", "9", "10", "11"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "The pattern adds 2 each time, so after 7 comes 9."
+    },
+    {
+      "question": "Which direction does the sun rise from?",
+      "options": ["West", "North", "South", "East"],
+      "correctAnswer": 3,
+      "difficulty": "easy",
+      "explanation": "The sun rises in the East and sets in the West."
+    },
+    {
+      "question": "How many sides does a rectangle have?",
+      "options": ["3", "4", "5", "6"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "A rectangle has 4 sides."
+    },
+    {
+      "question": "Which of these comes first in the alphabet? M, Z, A, or F?",
+      "options": ["M", "Z", "A", "F"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A is the very first letter of the alphabet."
+    },
+    {
+      "question": "What is 2 times 2?",
+      "options": ["2", "4", "6", "8"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "2 times 2 equals 4."
+    },
+    {
+      "question": "Which of these is used to cook food? Pillow, Pan, Pen, Pot.",
+      "options": ["Pillow", "Pan", "Pen", "Pot"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "A pan is a kitchen tool used for cooking food."
+    },
+    {
+      "question": "How many hours are in a day?",
+      "options": ["12", "20", "24", "48"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A day has 24 hours."
+    },
+    {
+      "question": "What animal is known as man's best friend?",
+      "options": ["Cat", "Dog", "Horse", "Fish"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Dogs are traditionally called man's best friend."
+    },
+    {
+      "question": "Which of these is a liquid? Stone, Wood, Water, Metal.",
+      "options": ["Stone", "Wood", "Water", "Metal"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Water is a liquid at room temperature."
+    },
+    {
+      "question": "What is 100 minus 50?",
+      "options": ["40", "45", "50", "60"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "100 minus 50 equals 50."
+    },
+    {
+      "question": "Which of these is a means of transport? Table, Chair, Bus, Book.",
+      "options": ["Table", "Chair", "Bus", "Book"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A bus is a vehicle used for transport."
+    },
+    {
+      "question": "What do bees produce?",
+      "options": ["Milk", "Honey", "Silk", "Wool"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Bees produce honey in their hives."
+    },
+    {
+      "question": "How many fingers are on one hand?",
+      "options": ["4", "5", "6", "10"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Each hand has 5 fingers."
+    },
+    {
+      "question": "Which month comes after March?",
+      "options": ["February", "May", "April", "June"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "April comes right after March in the calendar."
+    },
+    {
+      "question": "What is the missing number? 5, 10, 15, __, 25.",
+      "options": ["16", "18", "20", "22"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "The pattern increases by 5 each time, so the missing number is 20."
+    },
+    {
+      "question": "Which of these is a body part? Happiness, Elbow, Cloud, Street.",
+      "options": ["Happiness", "Elbow", "Cloud", "Street"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "The elbow is a joint in the human arm."
+    },
+    {
+      "question": "What is 4 times 5?",
+      "options": ["15", "18", "20", "25"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "4 times 5 equals 20."
+    },
+    {
+      "question": "Which of these can you drink? Rock, Sand, Juice, Metal.",
+      "options": ["Rock", "Sand", "Juice", "Metal"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Juice is a beverage you can drink."
+    },
+    {
+      "question": "How many zeros are in the number one thousand?",
+      "options": ["2", "3", "4", "5"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "One thousand is written as 1000, which has 3 zeros."
+    },
+    {
+      "question": "Which of these is a type of weather? Mountain, River, Rain, Lake.",
+      "options": ["Mountain", "River", "Rain", "Lake"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Rain is a type of weather; the others are geographical features."
+    },
+    {
+      "question": "What is 6 plus 7?",
+      "options": ["11", "12", "13", "14"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "6 plus 7 equals 13."
+    },
+    {
+      "question": "If there are 2 rows with 5 chairs each, how many chairs are there in total?",
+      "options": ["7", "8", "9", "10"],
+      "correctAnswer": 3,
+      "difficulty": "easy",
+      "explanation": "2 rows multiplied by 5 chairs equals 10 chairs in total."
+    },
+    {
+      "question": "Which of these is an insect? Lion, Eagle, Butterfly, Whale.",
+      "options": ["Lion", "Eagle", "Butterfly", "Whale"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A butterfly is an insect; the others are a mammal, a bird, and a sea mammal."
+    },
+    {
+      "question": "What does the letter S in the word S U N stand for?",
+      "options": [
+        "The last letter",
+        "The middle letter",
+        "The first letter",
+        "A silent letter"
+      ],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "S is the first letter in the word S U N."
+    },
+    {
+      "question": "Which of these is cold? Ice, Fire, Sun, Candle.",
+      "options": ["Ice", "Fire", "Sun", "Candle"],
+      "correctAnswer": 0,
+      "difficulty": "easy",
+      "explanation": "Ice is cold; fire, the sun, and a candle all produce heat."
+    },
+    {
+      "question": "How many minutes are in half an hour?",
+      "options": ["15", "25", "30", "45"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Half of 60 minutes is 30 minutes."
+    },
+    {
+      "question": "What is 8 divided by 2?",
+      "options": ["2", "3", "4", "6"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "8 divided by 2 equals 4."
+    },
+    {
+      "question": "Which of these is a sport? Cooking, Painting, Swimming, Sleeping.",
+      "options": ["Cooking", "Painting", "Swimming", "Sleeping"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Swimming is a sport that is also an Olympic event."
+    },
+    {
+      "question": "What comes before 50 in counting by tens?",
+      "options": ["30", "40", "45", "60"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "When counting by tens, 40 comes before 50."
+    },
+    {
+      "question": "Which is the smallest number? 25, 52, 15, 51.",
+      "options": ["25", "52", "15", "51"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "15 is the smallest of the four numbers given."
+    },
+    {
+      "question": "How many sides does a pentagon have?",
+      "options": ["4", "5", "6", "7"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "The prefix penta means five, so a pentagon has 5 sides."
+    },
+    {
+      "question": "Which of these is a tool? Flower, Hammer, Cloud, River.",
+      "options": ["Flower", "Hammer", "Cloud", "River"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "A hammer is a tool used for driving nails and building."
+    },
+    {
+      "question": "What is 7 times 2?",
+      "options": ["12", "13", "14", "15"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "7 times 2 equals 14."
+    },
+    {
+      "question": "Which of these is a country? London, Paris, India, Amazon.",
+      "options": ["London", "Paris", "India", "Amazon"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "India is a country; London and Paris are cities, and Amazon is a river."
+    },
+    {
+      "question": "What is the first day of the week?",
+      "options": ["Monday", "Saturday", "Sunday", "Tuesday"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Sunday is traditionally the first day of the week."
+    },
+    {
+      "question": "If you add 0 to any number, what do you get?",
+      "options": ["Zero", "Double the number", "The same number", "One more"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Adding zero to any number leaves the number unchanged."
+    },
+    {
+      "question": "Which of these is a school subject? Pillow, History, Umbrella, Door.",
+      "options": ["Pillow", "History", "Umbrella", "Door"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "History is an academic subject taught in school."
+    },
+    {
+      "question": "How many legs does a spider have?",
+      "options": ["4", "6", "8", "10"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A spider has 8 legs, which makes it an arachnid, not an insect."
+    },
+    {
+      "question": "What is 15 plus 15?",
+      "options": ["25", "28", "30", "32"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "15 plus 15 equals 30."
+    },
+    {
+      "question": "Which of these is an ocean? Nile, Thames, Pacific, Amazon.",
+      "options": ["Nile", "Thames", "Pacific", "Amazon"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "The Pacific is the world's largest ocean; the others are rivers."
+    },
+    {
+      "question": "What is 9 minus 4?",
+      "options": ["3", "4", "5", "6"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "9 minus 4 equals 5."
+    },
+    {
+      "question": "Which of these gives us light at night? Moon, Tree, Rock, Sand.",
+      "options": ["Moon", "Tree", "Rock", "Sand"],
+      "correctAnswer": 0,
+      "difficulty": "easy",
+      "explanation": "The moon reflects sunlight and illuminates the night sky."
+    },
+    {
+      "question": "How many vowels are in the word B E A U T Y?",
+      "options": ["2", "3", "4", "5"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "The word B E A U T Y contains three vowels: E, A, and U."
+    },
+    {
+      "question": "What is the product of 6 times 6?",
+      "options": ["30", "32", "36", "42"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "6 times 6 equals 36."
+    },
+    {
+      "question": "Which of these is a musical instrument? Hammer, Violin, Bucket, Rope.",
+      "options": ["Hammer", "Violin", "Bucket", "Rope"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "A violin is a string musical instrument."
+    },
+    {
+      "question": "How many seconds are in 1 minute?",
+      "options": ["30", "50", "60", "100"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "There are 60 seconds in one minute."
+    },
+    {
+      "question": "Which of these can you read? Television, Book, Chair, Lamp.",
+      "options": ["Television", "Book", "Chair", "Lamp"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "A book contains written text that can be read."
+    },
+    {
+      "question": "What comes after Z in the alphabet?",
+      "options": ["A", "Nothing, it is the last letter", "AA", "ZZ"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Z is the final letter of the alphabet; there is no letter after it."
+    },
+    {
+      "question": "What is 25 divided by 5?",
+      "options": ["3", "4", "5", "6"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "25 divided by 5 equals 5."
+    },
+    {
+      "question": "Which of these is a season? Windy, Hot, Summer, Cold.",
+      "options": ["Windy", "Hot", "Summer", "Cold"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Summer is one of the four seasons of the year."
+    },
+    {
+      "question": "How many eyes does a normal human have?",
+      "options": ["1", "2", "3", "4"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Humans have 2 eyes."
+    },
+    {
+      "question": "What is 3 plus 3 plus 3?",
+      "options": ["6", "7", "8", "9"],
+      "correctAnswer": 3,
+      "difficulty": "easy",
+      "explanation": "3 plus 3 is 6, and 6 plus 3 is 9."
+    },
+    {
+      "question": "Which of these lives in the sea? Elephant, Dolphin, Tiger, Eagle.",
+      "options": ["Elephant", "Dolphin", "Tiger", "Eagle"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "Dolphins are marine mammals that live in the sea."
+    },
+    {
+      "question": "How many faces does a cube have?",
+      "options": ["4", "5", "6", "8"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "A cube has 6 flat square faces."
+    },
+    {
+      "question": "What is the next number? 100, 90, 80, 70, ...",
+      "options": ["65", "60", "55", "50"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "The pattern decreases by 10 each time, so after 70 comes 60."
+    },
+    {
+      "question": "Which of these is a type of tree? Rose, Oak, Lily, Daisy.",
+      "options": ["Rose", "Oak", "Lily", "Daisy"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "An oak is a large tree; the others are flowers."
+    },
+    {
+      "question": "What is 10 times 10?",
+      "options": ["10", "20", "100", "1000"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "10 times 10 equals 100."
+    },
+    {
+      "question": "Which of these is an emotion? Running, Table, Happy, Blue.",
+      "options": ["Running", "Table", "Happy", "Blue"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Happy is an emotion; running is an action, and the others are objects."
+    },
+    {
+      "question": "How many continents are there on Earth?",
+      "options": ["5", "6", "7", "8"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "Earth has 7 continents: Africa, Antarctica, Asia, Australia, Europe, North America, and South America."
+    },
+    {
+      "question": "What is 50 plus 25?",
+      "options": ["65", "70", "75", "80"],
+      "correctAnswer": 2,
+      "difficulty": "easy",
+      "explanation": "50 plus 25 equals 75."
+    },
+    {
+      "question": "Which letter is in the middle of the alphabet? Hint, the alphabet has 26 letters.",
+      "options": ["L", "M", "N", "O"],
+      "correctAnswer": 1,
+      "difficulty": "easy",
+      "explanation": "With 26 letters, M is the 13th letter, making it the middle letter of the alphabet."
+    },
+    {
+      "question": "What type of triangle has all three sides equal?",
+      "options": ["Scalene", "Right", "Isosceles", "Equilateral"],
+      "correctAnswer": 3,
+      "difficulty": "easy",
+      "explanation": "An equilateral triangle has all three sides of equal length."
+    }
+  ],
+  "medium": [
+    {
+      "question": "What is the next number in this sequence? 2, 6, 18, 54, ...",
+      "options": ["108", "144", "162", "216"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Each term is multiplied by 3, so 54 times 3 equals 162."
+    },
+    {
+      "question": "If all roses are flowers and some flowers fade quickly, which is definitely true?",
+      "options": [
+        "All roses fade quickly",
+        "Some roses may fade quickly",
+        "No roses fade quickly",
+        "All flowers are roses"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Since only some flowers fade quickly, it is possible but not certain that some roses fade quickly."
+    },
+    {
+      "question": "A train travels 60 kilometres per hour. How far does it travel in 2 and a half hours?",
+      "options": ["120 km", "130 km", "140 km", "150 km"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "60 kilometres per hour multiplied by 2.5 hours equals 150 kilometres."
+    },
+    {
+      "question": "What is the value of the square root of 144?",
+      "options": ["10", "11", "12", "13"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "12 times 12 equals 144, so the square root of 144 is 12."
+    },
+    {
+      "question": "Which word does not belong? Sparrow, Eagle, Penguin, Robin.",
+      "options": ["Sparrow", "Eagle", "Penguin", "Robin"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Penguins cannot fly, while sparrows, eagles, and robins are all flying birds."
+    },
+    {
+      "question": "If a shirt costs 400 rupees and is on a 25 percent discount, what is the sale price?",
+      "options": ["275 rupees", "300 rupees", "325 rupees", "350 rupees"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "25 percent of 400 is 100, and 400 minus 100 equals 300 rupees."
+    },
+    {
+      "question": "What is the perimeter of a rectangle that is 8 centimetres long and 5 centimetres wide?",
+      "options": ["13 cm", "26 cm", "40 cm", "20 cm"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Perimeter equals 2 times the sum of length and width, so 2 times 13 equals 26 centimetres."
+    },
+    {
+      "question": "Which fraction is largest? One half, one third, one quarter, or one fifth?",
+      "options": ["One half", "One third", "One quarter", "One fifth"],
+      "correctAnswer": 0,
+      "difficulty": "medium",
+      "explanation": "One half equals 0.5, which is larger than one third, one quarter, and one fifth."
+    },
+    {
+      "question": "How many degrees are in a right angle?",
+      "options": ["45", "60", "90", "180"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "A right angle measures exactly 90 degrees."
+    },
+    {
+      "question": "If the pattern is A, C, E, G, what comes next?",
+      "options": ["H", "I", "J", "K"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The pattern skips every other letter, so after G comes I."
+    },
+    {
+      "question": "A clock shows 3 hours and 30 minutes. What angle do the minute and hour hands make?",
+      "options": ["55 degrees", "60 degrees", "75 degrees", "90 degrees"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "At 3:30, the hour hand is at 105 degrees and the minute hand is at 180 degrees, making a difference of 75 degrees."
+    },
+    {
+      "question": "What is 15 percent of 200?",
+      "options": ["25", "30", "35", "40"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "15 percent of 200 equals 0.15 times 200, which is 30."
+    },
+    {
+      "question": "Which number is a prime number? 15, 21, 23, 27.",
+      "options": ["15", "21", "23", "27"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "23 is divisible only by 1 and itself, making it a prime number."
+    },
+    {
+      "question": "If you fold a square piece of paper in half twice, how many layers do you have?",
+      "options": ["2", "3", "4", "8"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "One fold gives 2 layers. A second fold doubles that to 4 layers."
+    },
+    {
+      "question": "A container holds 3 litres. How many 250 millilitre cups can be filled from it?",
+      "options": ["8", "10", "12", "14"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "3 litres is 3000 millilitres. 3000 divided by 250 equals 12 cups."
+    },
+    {
+      "question": "What is the next term in the Fibonacci sequence? 1, 1, 2, 3, 5, 8, ...",
+      "options": ["11", "12", "13", "14"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "In the Fibonacci sequence, each term is the sum of the two before it. 5 plus 8 equals 13."
+    },
+    {
+      "question": "Which of these words is a synonym for brave? Timid, Cowardly, Courageous, Afraid.",
+      "options": ["Timid", "Cowardly", "Courageous", "Afraid"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Courageous means showing bravery, making it a synonym for brave."
+    },
+    {
+      "question": "If 5 workers can build a wall in 10 days, how many days will 10 workers take to build the same wall?",
+      "options": ["3 days", "5 days", "7 days", "20 days"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Doubling the number of workers halves the time, so 10 workers take 5 days."
+    },
+    {
+      "question": "What is the area of a triangle with a base of 10 centimetres and a height of 6 centimetres?",
+      "options": ["30 sq cm", "60 sq cm", "16 sq cm", "32 sq cm"],
+      "correctAnswer": 0,
+      "difficulty": "medium",
+      "explanation": "Area of a triangle equals half times base times height, so half of 10 times 6 equals 30 square centimetres."
+    },
+    {
+      "question": "If A equals 1 and B equals 2, continuing the pattern, what number does E represent?",
+      "options": ["3", "4", "5", "6"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "A equals 1, B equals 2, C equals 3, D equals 4, so E equals 5."
+    },
+    {
+      "question": "Which of these is the longest unit of time? Second, Minute, Hour, Decade.",
+      "options": ["Second", "Minute", "Hour", "Decade"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "A decade is 10 years, which is longer than an hour, minute, or second."
+    },
+    {
+      "question": "A shop sells notebooks at 3 for 90 rupees. What is the cost of 7 notebooks?",
+      "options": ["180 rupees", "200 rupees", "210 rupees", "240 rupees"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Each notebook costs 30 rupees. 7 times 30 equals 210 rupees."
+    },
+    {
+      "question": "What is the Roman numeral X I V equal to?",
+      "options": ["13", "14", "15", "16"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "X equals 10, I equals 1, V equals 5. X I V is 10 plus 4, which equals 14."
+    },
+    {
+      "question": "If 3x equals 21, what is the value of x?",
+      "options": ["5", "6", "7", "8"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Dividing both sides by 3 gives x equals 7."
+    },
+    {
+      "question": "Which word is spelled correctly? Recieve, Receive, Receeve, Receve.",
+      "options": ["Recieve", "Receive", "Receeve", "Receve"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The correct spelling is R E C E I V E, following the rule: i before e except after c."
+    },
+    {
+      "question": "What is the sum of the interior angles of a triangle?",
+      "options": ["90 degrees", "180 degrees", "270 degrees", "360 degrees"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The three interior angles of any triangle always add up to 180 degrees."
+    },
+    {
+      "question": "A box contains 5 red balls and 3 blue balls. If you pick one at random, what is the probability of picking a red ball?",
+      "options": ["3 out of 8", "5 out of 8", "5 out of 3", "1 out of 2"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "There are 5 red balls out of 8 total, so the probability is 5 out of 8."
+    },
+    {
+      "question": "Which of these is an antonym of ancient? New, Modern, Old, Historic.",
+      "options": ["New", "Modern", "Old", "Historic"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Modern means contemporary and new, making it the opposite of ancient."
+    },
+    {
+      "question": "What is 12 squared?",
+      "options": ["120", "124", "144", "164"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "12 squared means 12 times 12, which equals 144."
+    },
+    {
+      "question": "A car travels at 80 kilometres per hour. How long will it take to cover 200 kilometres?",
+      "options": [
+        "2 hours",
+        "2 hours 30 minutes",
+        "3 hours",
+        "3 hours 30 minutes"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "200 divided by 80 equals 2.5 hours, which is 2 hours and 30 minutes."
+    },
+    {
+      "question": "Which planet is known as the Red Planet?",
+      "options": ["Jupiter", "Venus", "Mars", "Saturn"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Mars appears red due to iron oxide on its surface and is called the Red Planet."
+    },
+    {
+      "question": "What is the largest organ in the human body?",
+      "options": ["Heart", "Brain", "Liver", "Skin"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "The skin is the largest organ, covering the entire body."
+    },
+    {
+      "question": "If a number is divisible by both 2 and 3, it is also divisible by which number?",
+      "options": ["4", "5", "6", "9"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "If a number is divisible by 2 and by 3, it must be divisible by 6."
+    },
+    {
+      "question": "What does the word benevolent mean?",
+      "options": [
+        "Cruel and harsh",
+        "Kind and generous",
+        "Loud and rude",
+        "Sad and lonely"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Benevolent means having a kindly and generous nature."
+    },
+    {
+      "question": "A recipe needs 2 cups of flour for 12 biscuits. How many cups are needed to make 30 biscuits?",
+      "options": ["4 cups", "5 cups", "6 cups", "7 cups"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "12 biscuits need 2 cups, so 30 biscuits need 5 cups. 30 divided by 12 times 2 equals 5."
+    },
+    {
+      "question": "Which gas do plants absorb from the air during photosynthesis?",
+      "options": ["Oxygen", "Nitrogen", "Carbon dioxide", "Hydrogen"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Plants absorb carbon dioxide from the air and release oxygen during photosynthesis."
+    },
+    {
+      "question": "What is the least common multiple of 4 and 6?",
+      "options": ["8", "10", "12", "24"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "The smallest number divisible by both 4 and 6 is 12."
+    },
+    {
+      "question": "The word DORMANT is most similar in meaning to which word? Active, Sleeping, Awake, Energetic.",
+      "options": ["Active", "Sleeping", "Awake", "Energetic"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Dormant means in a state of rest or inactivity, similar to sleeping."
+    },
+    {
+      "question": "Which ocean is the largest in the world?",
+      "options": ["Atlantic", "Indian", "Arctic", "Pacific"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "The Pacific Ocean is the largest, covering more than one third of Earth's surface."
+    },
+    {
+      "question": "What is the value of pi rounded to two decimal places?",
+      "options": ["3.12", "3.14", "3.16", "3.18"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Pi is approximately 3.14159, which rounds to 3.14 at two decimal places."
+    },
+    {
+      "question": "If you travel from East to West, which direction is on your right?",
+      "options": ["East", "West", "North", "South"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "When facing West, North is to your right."
+    },
+    {
+      "question": "Which of these numbers is divisible by 9? 63, 64, 65, 67.",
+      "options": ["63", "64", "65", "67"],
+      "correctAnswer": 0,
+      "difficulty": "medium",
+      "explanation": "63 divided by 9 equals 7 exactly. The sum of digits in 63 is 9, confirming divisibility."
+    },
+    {
+      "question": "What is the chemical symbol for water?",
+      "options": ["HO", "H 2 O", "CO 2", "O 2"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Water is made of 2 hydrogen atoms and 1 oxygen atom, written as H 2 O."
+    },
+    {
+      "question": "A palindrome is a word that reads the same forwards and backwards. Which of these is a palindrome? Level, Table, Chair, Window.",
+      "options": ["Level", "Table", "Chair", "Window"],
+      "correctAnswer": 0,
+      "difficulty": "medium",
+      "explanation": "L E V E L reads the same from left to right and right to left."
+    },
+    {
+      "question": "Which continent is both the hottest and the second largest in the world?",
+      "options": ["Asia", "Australia", "Africa", "South America"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Africa is the world's second largest continent and is known for its hot, arid regions."
+    },
+    {
+      "question": "What is 20 percent of 500?",
+      "options": ["50", "75", "100", "125"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "20 percent of 500 is 0.20 times 500, which equals 100."
+    },
+    {
+      "question": "Which of these sentences uses correct grammar? He don't know. He doesn't know. He not knowing. He no know.",
+      "options": [
+        "He don't know",
+        "He doesn't know",
+        "He not knowing",
+        "He no know"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The correct sentence is: He doesn't know. With a third person singular subject, we use does not."
+    },
+    {
+      "question": "What number is missing? 4, 9, 16, 25, __, 49.",
+      "options": ["30", "32", "36", "40"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "The sequence is made of perfect squares: 2 squared, 3 squared, 4 squared, 5 squared, 6 squared equals 36, 7 squared."
+    },
+    {
+      "question": "If you save 150 rupees per week, how much will you save in 6 weeks?",
+      "options": ["750 rupees", "850 rupees", "900 rupees", "950 rupees"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "150 times 6 equals 900 rupees."
+    },
+    {
+      "question": "Which type of energy does the sun primarily produce?",
+      "options": [
+        "Chemical energy",
+        "Nuclear energy",
+        "Electrical energy",
+        "Mechanical energy"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The sun produces energy through nuclear fusion reactions in its core."
+    },
+    {
+      "question": "What is the next number in the pattern? 3, 6, 12, 24, ...",
+      "options": ["36", "42", "48", "72"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Each term is doubled, so 24 times 2 equals 48."
+    },
+    {
+      "question": "What is the perimeter of an equilateral triangle with each side measuring 9 centimetres?",
+      "options": ["18 cm", "24 cm", "27 cm", "36 cm"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "An equilateral triangle has 3 equal sides, so 3 times 9 equals 27 centimetres."
+    },
+    {
+      "question": "Which word does NOT share the same root as the others? Bicycle, Binocular, Bifocal, Biography.",
+      "options": ["Bicycle", "Binocular", "Bifocal", "Biography"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "Bicycle, binocular, and bifocal all use the prefix bi meaning two. Biography uses bio meaning life."
+    },
+    {
+      "question": "If you multiply a number by itself and get 225, what is the number?",
+      "options": ["13", "14", "15", "16"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "15 times 15 equals 225, so the square root of 225 is 15."
+    },
+    {
+      "question": "A triangle has angles measuring 60 degrees and 80 degrees. What is the third angle?",
+      "options": ["30 degrees", "35 degrees", "40 degrees", "45 degrees"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "All three angles of a triangle add to 180. So 180 minus 60 minus 80 equals 40 degrees."
+    },
+    {
+      "question": "Which of these is an example of a simile? The sun is a ball of fire. He ran like the wind. The trees danced. She has a heart of stone.",
+      "options": [
+        "The sun is a ball of fire",
+        "He ran like the wind",
+        "The trees danced",
+        "She has a heart of stone"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "A simile compares two things using like or as. He ran like the wind uses the word like to compare."
+    },
+    {
+      "question": "What is the greatest common factor of 36 and 48?",
+      "options": ["6", "8", "12", "18"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Both 36 and 48 are divisible by 12, and no larger number divides both evenly."
+    },
+    {
+      "question": "Which organ pumps blood around the human body?",
+      "options": ["Lungs", "Liver", "Heart", "Kidney"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "The heart is a muscular organ that pumps blood through the circulatory system."
+    },
+    {
+      "question": "If the ratio of boys to girls in a class is 3 to 2, and there are 30 students in total, how many boys are there?",
+      "options": ["12", "15", "18", "20"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "The total parts are 3 plus 2 equals 5. Boys are 3 out of 5, so 3 divided by 5 times 30 equals 18 boys."
+    },
+    {
+      "question": "What is the meaning of the word VERBOSE?",
+      "options": [
+        "Using very few words",
+        "Using too many words",
+        "Speaking clearly",
+        "Writing neatly"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Verbose describes someone who uses far more words than necessary."
+    },
+    {
+      "question": "How many faces, edges, and vertices does a cube have in total?",
+      "options": ["24", "26", "28", "30"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "A cube has 6 faces, 12 edges, and 8 vertices. 6 plus 12 plus 8 equals 26."
+    },
+    {
+      "question": "What is the average of 10, 20, and 30?",
+      "options": ["15", "20", "25", "30"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The sum is 60, and 60 divided by 3 equals an average of 20."
+    },
+    {
+      "question": "Which instrument measures temperature?",
+      "options": ["Barometer", "Thermometer", "Altimeter", "Speedometer"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "A thermometer is used to measure temperature."
+    },
+    {
+      "question": "What is 4 to the power of 3?",
+      "options": ["12", "48", "64", "81"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "4 to the power of 3 means 4 times 4 times 4, which equals 64."
+    },
+    {
+      "question": "Which of these is a metaphor? The dog is friendly. Life is a rollercoaster. She walks slowly. He bought a red car.",
+      "options": [
+        "The dog is friendly",
+        "Life is a rollercoaster",
+        "She walks slowly",
+        "He bought a red car"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Life is a rollercoaster directly compares life to a rollercoaster without using like or as, making it a metaphor."
+    },
+    {
+      "question": "If you earn 2500 rupees in 5 days, how much do you earn in a day?",
+      "options": ["400 rupees", "450 rupees", "500 rupees", "550 rupees"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "2500 divided by 5 equals 500 rupees per day."
+    },
+    {
+      "question": "How many degrees are in a straight line?",
+      "options": ["90", "120", "180", "360"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "A straight angle measures exactly 180 degrees."
+    },
+    {
+      "question": "Which of these is NOT a renewable source of energy? Coal, Solar, Wind, Hydro.",
+      "options": ["Coal", "Solar", "Wind", "Hydro"],
+      "correctAnswer": 0,
+      "difficulty": "medium",
+      "explanation": "Coal is a fossil fuel and is non-renewable. Solar, wind, and hydro power are all renewable."
+    },
+    {
+      "question": "What is the next term? Z, Y, X, W, ...",
+      "options": ["A", "U", "V", "T"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "The letters go backward through the alphabet, so after W comes V."
+    },
+    {
+      "question": "If John is taller than Sam, and Sam is taller than Tim, who is the shortest?",
+      "options": ["John", "Sam", "Tim", "Cannot be determined"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "John is tallest, then Sam, then Tim. So Tim is the shortest."
+    },
+    {
+      "question": "What is the circumference of a circle with a radius of 7 centimetres? Use pi equals 22 over 7.",
+      "options": ["22 cm", "44 cm", "66 cm", "88 cm"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Circumference equals 2 times pi times radius. 2 times 22 over 7 times 7 equals 44 centimetres."
+    },
+    {
+      "question": "A number increased by 30 percent becomes 130. What was the original number?",
+      "options": ["90", "95", "100", "110"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "If x times 1.3 equals 130, then x equals 130 divided by 1.3, which is 100."
+    },
+    {
+      "question": "Which of these words means the same as INQUISITIVE? Lazy, Curious, Quiet, Tired.",
+      "options": ["Lazy", "Curious", "Quiet", "Tired"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Inquisitive means eager to learn or know, which is the same as curious."
+    },
+    {
+      "question": "What fraction of an hour is 20 minutes?",
+      "options": ["One half", "One quarter", "One third", "Two thirds"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "20 out of 60 minutes simplifies to one third of an hour."
+    },
+    {
+      "question": "In which layer of the atmosphere does weather occur?",
+      "options": ["Stratosphere", "Mesosphere", "Troposphere", "Thermosphere"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "The troposphere is the lowest layer of the atmosphere, where all weather phenomena take place."
+    },
+    {
+      "question": "Which number is both a perfect square and a perfect cube? 8, 16, 36, 64.",
+      "options": ["8", "16", "36", "64"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "64 equals 8 squared and also 4 cubed, making it both a perfect square and a perfect cube."
+    },
+    {
+      "question": "What is the Roman numeral for 50?",
+      "options": ["V", "X", "L", "C"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "In Roman numerals, L represents the value of 50."
+    },
+    {
+      "question": "Two trains start from the same station going in opposite directions at 60 and 40 kilometres per hour. How far apart will they be after 2 hours?",
+      "options": ["160 km", "180 km", "200 km", "220 km"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Their combined speed is 100 kilometres per hour. In 2 hours, they will be 200 kilometres apart."
+    },
+    {
+      "question": "What does the prefix MICRO mean?",
+      "options": ["Large", "Small", "Fast", "Slow"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The prefix micro means very small, as in microscope or microchip."
+    },
+    {
+      "question": "If you flip a fair coin twice, what is the probability of getting heads both times?",
+      "options": ["1 out of 2", "1 out of 3", "1 out of 4", "1 out of 6"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "The probability of heads each time is 1 in 2. Two independent events multiply: 1 over 2 times 1 over 2 equals 1 in 4."
+    },
+    {
+      "question": "Which country is the largest in the world by land area?",
+      "options": ["China", "United States", "Canada", "Russia"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "Russia is the largest country in the world, covering about 17 million square kilometres."
+    },
+    {
+      "question": "What is 0.25 as a percentage?",
+      "options": ["2.5 percent", "25 percent", "0.25 percent", "250 percent"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Multiplying 0.25 by 100 gives 25 percent."
+    },
+    {
+      "question": "Which part of a plant conducts photosynthesis?",
+      "options": ["Roots", "Stem", "Leaves", "Flowers"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Leaves contain chlorophyll and are the primary site of photosynthesis."
+    },
+    {
+      "question": "What is the result of 3 to the power of 4?",
+      "options": ["12", "27", "64", "81"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "3 to the power of 4 means 3 times 3 times 3 times 3, which equals 81."
+    },
+    {
+      "question": "Which of these sentences is in the passive voice? The dog bit the man. The man was bitten by the dog. The dog is barking. The man ran away.",
+      "options": [
+        "The dog bit the man",
+        "The man was bitten by the dog",
+        "The dog is barking",
+        "The man ran away"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "In the passive voice, the subject receives the action. The man was bitten places the man as the receiver."
+    },
+    {
+      "question": "What is the number of diagonals in a hexagon?",
+      "options": ["6", "7", "8", "9"],
+      "correctAnswer": 3,
+      "difficulty": "medium",
+      "explanation": "A hexagon has 6 vertices. The number of diagonals is n times n minus 3 divided by 2, which gives 9."
+    },
+    {
+      "question": "Who wrote the play Romeo and Juliet?",
+      "options": [
+        "Charles Dickens",
+        "William Shakespeare",
+        "Jane Austen",
+        "Mark Twain"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Romeo and Juliet was written by the English playwright William Shakespeare."
+    },
+    {
+      "question": "What is the decimal equivalent of the fraction 3 over 4?",
+      "options": ["0.25", "0.5", "0.75", "0.8"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "3 divided by 4 equals 0.75."
+    },
+    {
+      "question": "What does the word AMBIGUOUS mean?",
+      "options": [
+        "Very clear",
+        "Open to more than one interpretation",
+        "Extremely fast",
+        "Deeply sad"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Ambiguous means unclear or open to multiple interpretations."
+    },
+    {
+      "question": "If the simple interest on a sum is 200 rupees at 5 percent per year for 2 years, what is the principal amount?",
+      "options": ["1500 rupees", "1800 rupees", "2000 rupees", "2200 rupees"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Simple interest equals Principal times Rate times Time divided by 100. 200 equals P times 5 times 2 divided by 100, so P equals 2000 rupees."
+    },
+    {
+      "question": "Which type of rock is formed from cooled magma?",
+      "options": ["Sedimentary", "Metamorphic", "Igneous", "Limestone"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Igneous rock forms when molten magma cools and solidifies."
+    },
+    {
+      "question": "What is the value of the expression 5 plus 3 times 2?",
+      "options": ["16", "13", "11", "10"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Following order of operations, multiplication comes before addition. 3 times 2 is 6, and 5 plus 6 is 11."
+    },
+    {
+      "question": "What is the value of the expression 2 to the power of 8?",
+      "options": ["128", "256", "512", "1024"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "2 to the power of 8 means 2 multiplied by itself 8 times, which equals 256."
+    },
+    {
+      "question": "Which gas makes up the majority of Earth's atmosphere?",
+      "options": ["Oxygen", "Carbon dioxide", "Nitrogen", "Argon"],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Nitrogen makes up approximately 78 percent of Earth's atmosphere."
+    },
+    {
+      "question": "What is the reciprocal of 4?",
+      "options": ["0.2", "0.25", "0.4", "0.5"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The reciprocal of 4 is 1 divided by 4, which equals 0.25."
+    },
+    {
+      "question": "A bicycle wheel has a diameter of 70 centimetres. How far does the bicycle travel in one full turn of the wheel? Use pi as 22 over 7.",
+      "options": ["210 cm", "220 cm", "230 cm", "240 cm"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Circumference equals pi times diameter. 22 over 7 times 70 equals 220 centimetres."
+    },
+    {
+      "question": "Which of these is an example of onomatopoeia? The wind was cold. The bee buzzed loudly. She smiled kindly. He walked away.",
+      "options": [
+        "The wind was cold",
+        "The bee buzzed loudly",
+        "She smiled kindly",
+        "He walked away"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "Onomatopoeia uses words that imitate sounds. Buzzed imitates the sound a bee makes."
+    },
+    {
+      "question": "What is the sum of all even numbers from 2 to 20?",
+      "options": ["100", "110", "120", "130"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "The even numbers from 2 to 20 are 2, 4, 6, 8, 10, 12, 14, 16, 18, 20. Their sum is 110."
+    },
+    {
+      "question": "What is the full form of the abbreviation D N A?",
+      "options": [
+        "Deoxyribose Nucleic Acid",
+        "Deoxyribonucleic Acid",
+        "Diribonucleic Acid",
+        "Dinucleic Acid"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "explanation": "D N A stands for Deoxyribonucleic Acid, the molecule that carries genetic information."
+    },
+    {
+      "question": "A box is 10 cm long, 5 cm wide, and 4 cm tall. What is its volume?",
+      "options": [
+        "150 cubic cm",
+        "180 cubic cm",
+        "200 cubic cm",
+        "220 cubic cm"
+      ],
+      "correctAnswer": 2,
+      "difficulty": "medium",
+      "explanation": "Volume equals length times width times height. 10 times 5 times 4 equals 200 cubic centimetres."
+    }
+  ],
+  "hard": [
+    {
+      "question": "What number comes next in the series? 3, 7, 16, 35, 74, ...",
+      "options": ["148", "150", "153", "158"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "Each term is doubled and an increasing number is added: ×2+1, ×2+2, ×2+3, ×2+4, ×2+5. So 74×2+5 = 153."
+    },
+    {
+      "question": "What number comes next in the series? 2, 5, 10, 17, 26, ...",
+      "options": ["35", "36", "37", "38"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "The gaps grow by 2 each time (3, 5, 7, 9, 11). So 26+11 = 37."
+    },
+    {
+      "question": "What number comes next in the series? 1, 2, 6, 24, 120, ...",
+      "options": ["600", "720", "840", "960"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Each term is multiplied by the next counting number: ×2, ×3, ×4, ×5, ×6. So 120×6 = 720."
+    },
+    {
+      "question": "What number comes next in the series? 5, 11, 23, 47, 95, ...",
+      "options": ["181", "189", "191", "193"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "Each term follows the rule ×2+1. So 95×2+1 = 191."
+    },
+    {
+      "question": "What number comes next in the series? 7, 26, 63, 124, ...",
+      "options": ["215", "216", "217", "218"],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "The terms are one less than perfect cubes: 2³−1, 3³−1, 4³−1, 5³−1. Next is 6³−1 = 215."
+    },
+    {
+      "question": "What number comes next in the series? 100, 96, 88, 72, ...",
+      "options": ["36", "40", "44", "48"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "The amount subtracted doubles each time: 4, 8, 16, 32. So 72−32 = 40."
+    },
+    {
+      "question": "Find the missing number: 4, 9, 19, 39, 79, ...",
+      "options": ["139", "149", "159", "169"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "Each term follows the rule ×2+1. So 79×2+1 = 159."
+    },
+    {
+      "question": "Find the odd one out: 8, 27, 64, 100, 125.",
+      "options": ["27", "64", "100", "125"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "8, 27, 64 and 125 are perfect cubes (2³, 3³, 4³, 5³). 100 is not a perfect cube."
+    },
+    {
+      "question": "Find the odd one out: 3, 5, 9, 11, 13.",
+      "options": ["5", "9", "11", "13"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "3, 5, 11 and 13 are prime numbers. 9 = 3×3 is not prime."
+    },
+    {
+      "question": "If 2 # 3 = 13 and 3 # 4 = 25, then what is 4 # 5?",
+      "options": ["39", "41", "43", "45"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "The rule is a # b = a² + b². So 4² + 5² = 16 + 25 = 41."
+    },
+    {
+      "question": "If 5 @ 3 = 16 and 7 @ 2 = 18, then what is 6 @ 4?",
+      "options": ["18", "20", "22", "24"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "The rule is (a + b) × 2. So (6 + 4) × 2 = 20."
+    },
+    {
+      "question": "If 1 = 1, 2 = 8, 3 = 27 and 4 = 64, then 6 = ?",
+      "options": ["180", "196", "216", "256"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "Each number is cubed. So 6³ = 216."
+    },
+    {
+      "question": "Which letter comes next? A, C, F, J, O, ...",
+      "options": ["S", "T", "U", "V"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "The skips increase by one each time: +2, +3, +4, +5, +6. From O, count 6 letters to reach U."
+    },
+    {
+      "question": "Which letter comes next? B, D, G, K, P, ...",
+      "options": ["U", "V", "W", "X"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "The skips increase each time: +2, +3, +4, +5, +6. From P, count 6 letters to reach V."
+    },
+    {
+      "question": "Which letter comes next? Z, X, V, T, ...",
+      "options": ["S", "R", "Q", "P"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "The letters go backwards skipping one each time, so after T comes R."
+    },
+    {
+      "question": "In a certain code, MANGO is written as NBOHP. How is APPLE written in that code?",
+      "options": ["BQQMF", "BQPMF", "AQQMF", "BRRMF"],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "Each letter is shifted forward by one: A→B, P→Q, P→Q, L→M, E→F, giving BQQMF."
+    },
+    {
+      "question": "If each letter is replaced by the next letter of the alphabet, what is the code for COLD?",
+      "options": ["DPME", "DPNE", "DOME", "CPME"],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "C→D, O→P, L→M, D→E gives DPME."
+    },
+    {
+      "question": "If '+' means '×', '×' means '−', '−' means '÷', and '÷' means '+', then 16 ÷ 4 − 2 + 3 × 6 = ?",
+      "options": ["14", "16", "18", "20"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Replacing the symbols gives 16 + 4 ÷ 2 × 3 − 6. By order of operations: 4÷2=2, 2×3=6, then 16+6−6 = 16."
+    },
+    {
+      "question": "Pointing to a photograph, a man said, 'She is the daughter of my grandfather's only son.' How is the woman related to the man?",
+      "options": ["Sister", "Mother", "Aunt", "Cousin"],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "The grandfather's only son is the man's father, so the father's daughter is the man's sister."
+    },
+    {
+      "question": "A is B's brother. C is A's mother. D is C's father. How is B related to D?",
+      "options": ["Grandfather", "Grandmother", "Grandchild", "Uncle"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "C is the mother of A and B, and D is C's father, so D is the grandfather of A and B. Therefore B is D's grandchild."
+    },
+    {
+      "question": "A man walks 5 km north, turns right and walks 3 km, then turns right and walks 5 km. How far is he from the starting point?",
+      "options": ["3 km", "5 km", "8 km", "13 km"],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "The 5 km north and the later 5 km south cancel out, leaving him 3 km east of the start."
+    },
+    {
+      "question": "You start facing north, turn 90 degrees clockwise, then 180 degrees, then 90 degrees anticlockwise. Which direction do you now face?",
+      "options": ["North", "East", "South", "West"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "North → (90° CW) East → (180°) West → (90° ACW) South."
+    },
+    {
+      "question": "The day before yesterday was Friday. What day will it be the day after tomorrow?",
+      "options": ["Monday", "Tuesday", "Wednesday", "Thursday"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "If the day before yesterday was Friday, today is Sunday, so the day after tomorrow is Tuesday."
+    },
+    {
+      "question": "If today is Wednesday, what day of the week will it be after 61 days?",
+      "options": ["Sunday", "Monday", "Tuesday", "Wednesday"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "61 divided by 7 leaves a remainder of 5. Five days after Wednesday is Monday."
+    },
+    {
+      "question": "In a row of 40 students, R is 11th from the left. What is R's position from the right?",
+      "options": ["29", "30", "31", "32"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Position from the right = 40 − 11 + 1 = 30."
+    },
+    {
+      "question": "In a single row, a student is 6th from the left and 10th from the right. How many students are in the row?",
+      "options": ["14", "15", "16", "17"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Total = 6 + 10 − 1 = 15."
+    },
+    {
+      "question": "The sum of the ages of a father and his son is 56 years. In 4 years the father will be three times as old as the son. What is the son's present age?",
+      "options": ["10", "12", "14", "16"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Let the son be s. Then (56 − s + 4) = 3(s + 4), which gives 60 − s = 3s + 12, so s = 12."
+    },
+    {
+      "question": "A is twice as old as B. Five years ago, A was three times as old as B. What is B's present age?",
+      "options": ["8", "10", "12", "15"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Let B = x, so A = 2x. Then 2x − 5 = 3(x − 5), giving x = 10."
+    },
+    {
+      "question": "A can finish a piece of work in 12 days and B in 18 days. Working together, how long will they take?",
+      "options": ["7.2 days", "7.5 days", "8 days", "9 days"],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "Combined rate = 1/12 + 1/18 = 5/36 per day, so the work takes 36/5 = 7.2 days."
+    },
+    {
+      "question": "If 10 workers complete a task in 15 days, how many days will 25 workers take at the same rate?",
+      "options": ["5", "6", "7", "8"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Total work = 10 × 15 = 150 worker-days. With 25 workers, 150 ÷ 25 = 6 days."
+    },
+    {
+      "question": "A 150-metre-long train crosses a pole in 15 seconds. What is its speed?",
+      "options": ["30 km/h", "36 km/h", "40 km/h", "45 km/h"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Speed = 150 ÷ 15 = 10 m/s, and 10 × 3.6 = 36 km/h."
+    },
+    {
+      "question": "A number is first increased by 20 percent and then decreased by 20 percent. What is the net change?",
+      "options": [
+        "4 percent increase",
+        "4 percent decrease",
+        "No change",
+        "2 percent decrease"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Multiplying by 1.2 and then 0.8 gives 0.96, a net decrease of 4 percent."
+    },
+    {
+      "question": "An article bought for 800 rupees is sold for 1000 rupees. What is the profit percent?",
+      "options": ["20 percent", "25 percent", "30 percent", "200 percent"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Profit = 200 on a cost of 800, and 200 ÷ 800 = 25 percent."
+    },
+    {
+      "question": "A shopkeeper marks an item 40 percent above cost and then gives a 10 percent discount. What is the profit percent?",
+      "options": ["24 percent", "25 percent", "26 percent", "30 percent"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "Selling price factor = 1.40 × 0.90 = 1.26, which is a 26 percent profit."
+    },
+    {
+      "question": "If A : B = 2 : 3 and B : C = 4 : 5, what is A : C?",
+      "options": ["8 : 15", "2 : 5", "8 : 12", "10 : 15"],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "Make B common: A : B = 8 : 12 and B : C = 12 : 15, so A : C = 8 : 15."
+    },
+    {
+      "question": "The average of 5 numbers is 20. If the number 35 is removed, what is the average of the remaining four?",
+      "options": ["15", "16", "16.25", "18"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "The total is 100. Removing 35 leaves 65, and 65 ÷ 4 = 16.25."
+    },
+    {
+      "question": "In an election between two candidates, the winner secured 60 percent of the votes and won by 1000 votes. How many total votes were cast?",
+      "options": ["4000", "5000", "6000", "2500"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "The winning margin is 60 − 40 = 20 percent, which equals 1000 votes, so the total is 5000."
+    },
+    {
+      "question": "A bag contains 3 red, 4 green and 5 blue balls. If one ball is drawn at random, what is the probability that it is NOT blue?",
+      "options": ["5/12", "7/12", "1/2", "1/3"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "There are 7 non-blue balls out of 12 total, so the probability is 7/12."
+    },
+    {
+      "question": "Two dice are rolled together. What is the probability that their sum is 7?",
+      "options": ["1/6", "1/9", "1/12", "5/36"],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "There are 6 ways to make 7 out of 36 outcomes, which simplifies to 1/6."
+    },
+    {
+      "question": "A cube painted on all its faces is cut into 27 equal smaller cubes. How many of the small cubes have exactly two painted faces?",
+      "options": ["4", "6", "8", "12"],
+      "correctAnswer": 3,
+      "difficulty": "hard",
+      "explanation": "The cubes with exactly two painted faces sit on the edges. A cube has 12 edges, giving 12 such small cubes."
+    },
+    {
+      "question": "A cube painted on all its faces is cut into 27 equal smaller cubes. How many small cubes have no painted face at all?",
+      "options": ["0", "1", "2", "4"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Only the single cube hidden in the very centre has no painted face."
+    },
+    {
+      "question": "40 litres of a mixture contain milk and water in the ratio 3 : 1. How much water must be added to make the ratio 1 : 1?",
+      "options": ["10 litres", "15 litres", "20 litres", "30 litres"],
+      "correctAnswer": 2,
+      "difficulty": "hard",
+      "explanation": "There are 30 litres of milk and 10 of water. To match the milk you need 30 litres of water, so add 20 litres."
+    },
+    {
+      "question": "What is the compound interest on 1000 rupees at 10 percent per annum for 2 years?",
+      "options": ["200 rupees", "210 rupees", "220 rupees", "240 rupees"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "After two years the amount is 1000 × 1.1 × 1.1 = 1210, so the interest is 210 rupees."
+    },
+    {
+      "question": "Choose the word most nearly OPPOSITE in meaning to ABUNDANT.",
+      "options": ["Plentiful", "Scarce", "Rich", "Ample"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Abundant means existing in large amounts, so its opposite is scarce."
+    },
+    {
+      "question": "Choose the word most nearly OPPOSITE in meaning to TRANSPARENT.",
+      "options": ["Clear", "Opaque", "Glassy", "Visible"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Transparent means see-through, so its opposite is opaque."
+    },
+    {
+      "question": "The word METICULOUS most nearly means:",
+      "options": ["Careless", "Very careful", "Lazy", "Quick"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "Meticulous describes someone who shows great attention to detail, that is, very careful."
+    },
+    {
+      "question": "Which word best completes the analogy? Painter is to Brush as Writer is to ...",
+      "options": ["Paper", "Pen", "Book", "Word"],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "A painter works with a brush just as a writer works with a pen."
+    },
+    {
+      "question": "All books are pens. All pens are tables. Which conclusion must be true?",
+      "options": [
+        "All tables are books",
+        "All books are tables",
+        "Some pens are not tables",
+        "No book is a table"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "If every book is a pen and every pen is a table, then every book must also be a table."
+    },
+    {
+      "question": "Some pens are books. All books are papers. Which conclusion follows?",
+      "options": [
+        "All pens are papers",
+        "Some pens are papers",
+        "No pen is a paper",
+        "All papers are pens"
+      ],
+      "correctAnswer": 1,
+      "difficulty": "hard",
+      "explanation": "The pens that are books must be papers, so at least some pens are papers."
+    },
+    {
+      "question": "A is the father of B, but B is not the son of A. How is this possible?",
+      "options": [
+        "B is A's daughter",
+        "It is impossible",
+        "A is mistaken",
+        "B is adopted"
+      ],
+      "correctAnswer": 0,
+      "difficulty": "hard",
+      "explanation": "B can be A's child without being a son if B is a daughter."
+    }
+  ]
+}

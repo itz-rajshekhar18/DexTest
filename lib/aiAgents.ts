@@ -1,33 +1,14 @@
 import axios from "axios";
 import type { Question, TestResult, TestSession, TestType } from "./store";
 
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
-
-const IQ_MODEL =
-  process.env.NEXT_PUBLIC_IQ_MODEL || "openrouter/auto";
-const FREE_IQ_MODEL =
-  process.env.OPENROUTER_FREE_IQ_MODEL ||
-  process.env.NEXT_PUBLIC_FREE_IQ_MODEL ||
-  "openai/gpt-oss-20b:free";
-const TTS_MODEL =
-  process.env.NEXT_PUBLIC_TTS_MODEL || "google/gemini-flash-1.5-8b";
+// All OpenRouter calls go through the server proxy at /api/openrouter, which
+// reads OPENROUTER_API_KEY from .env.local. The browser never needs a key.
+const OPENROUTER_PROXY_URL = "/api/openrouter";
 
 type Message = {
   role: "system" | "user" | "assistant";
   content: string;
 };
-
-type OpenRouterResponse = {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-  }>;
-};
-
-type QuestionType = "logical" | "mathematical" | "spatial" | "verbal";
-type QuestionAgentMode = "written" | "voice";
 
 type GameAssessment = {
   score: number;
@@ -49,130 +30,84 @@ function getErrorSummary(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-function canCallOpenRouter() {
-  return Boolean(API_KEY && API_KEY !== "your_api_key_here");
-}
-
-async function chatCompletion(model: string, messages: Message[], maxTokens = 1600) {
-  if (!canCallOpenRouter()) {
-    throw new Error("OpenRouter API key is not configured.");
-  }
-
-  const requestCompletion = async (modelId: string) => {
-    const response = await axios.post<OpenRouterResponse>(
-      OPENROUTER_API_URL,
-      {
-        model: modelId,
-        messages,
-        temperature: 0.65,
-        max_tokens: maxTokens,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://dextest.app",
-          "X-Title": "DexTest AI Agents",
-        },
-      }
-    );
-
-    return response.data.choices?.[0]?.message?.content?.trim() || "";
-  };
-
-  try {
-    return await requestCompletion(model);
-  } catch (error) {
-    if (
-      axios.isAxiosError(error) &&
-      error.response?.status === 402 &&
-      model !== FREE_IQ_MODEL
-    ) {
-      console.warn(`OpenRouter model ${model} requires credits. Retrying with ${FREE_IQ_MODEL}.`);
-      return requestCompletion(FREE_IQ_MODEL);
+// Reports omit `model`, so the proxy falls back to QUESTION_MODEL (.env.local) —
+// keeping report generation on the same model as question generation.
+async function chatCompletion(messages: Message[], maxTokens = 1600) {
+  // The proxy returns { content } on success, or { error } when the server has
+  // no key / the upstream call fails. Callers catch this and fall back.
+  const response = await axios.post<{ content?: string; error?: string }>(
+    OPENROUTER_PROXY_URL,
+    {
+      messages,
+      temperature: 0.65,
+      max_tokens: maxTokens,
     }
+  );
 
-    throw error;
+  if (response.data.error) {
+    throw new Error(response.data.error);
   }
+
+  return response.data.content?.trim() || "";
 }
 
-function normalizeGeneratedQuestions(rawQuestions: unknown, count: number, uniquenessSeed: string): Question[] {
-  if (!Array.isArray(rawQuestions)) {
-    throw new Error("Question agent returned non-array JSON.");
-  }
+// --- Local question bank ---------------------------------------------------
+// Questions come from /public/questions.json (no LLM). The band is chosen by
+// class: below 8 -> easy, 8-10 -> medium, 11-12 -> hard. We pick `count` at
+// random from that band.
+type BankQuestion = {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  difficulty: "easy" | "medium" | "hard";
+  explanation: string;
+};
 
-  const normalized = rawQuestions.slice(0, count).map((rawQuestion, index) => {
-    const question = rawQuestion as Partial<Question>;
-    const correctAnswer = Number(question.correctAnswer);
-    const options = Array.isArray(question.options) ? question.options.slice(0, 4).map(String) : [];
+type QuestionBank = {
+  easy: BankQuestion[];
+  medium: BankQuestion[];
+  hard: BankQuestion[];
+};
 
-    if (
-      typeof question.question !== "string" ||
-      question.question.trim().length === 0 ||
-      options.length !== 4 ||
-      !Number.isInteger(correctAnswer) ||
-      correctAnswer < 0 ||
-      correctAnswer > 3
-    ) {
-      throw new Error(`Question agent returned invalid question at index ${index}.`);
-    }
-
-    return {
-      id: `${uniquenessSeed}-q${index + 1}`,
-      question: question.question.trim(),
-      options,
-      correctAnswer,
-      difficulty: question.difficulty || "medium",
-      explanation: "",
-      timeLimit: question.timeLimit || 60,
-    };
-  });
-
-  if (normalized.length !== count) {
-    throw new Error(`Question agent returned ${normalized.length} questions instead of ${count}.`);
-  }
-
-  return normalized;
+function bandForClass(classLevel: number): keyof QuestionBank {
+  if (classLevel <= 7) return "easy";
+  if (classLevel <= 10) return "medium";
+  return "hard";
 }
 
-async function runPythonQuestionAgent({
-  mode,
-  classLevel,
-  count,
-  studentGender,
-  previousQuestions,
-  uniquenessSeed,
-}: {
-  mode: QuestionAgentMode;
-  classLevel: number;
-  count: number;
-  studentGender?: string;
-  previousQuestions?: string[];
-  uniquenessSeed: string;
-}) {
-  const response = await fetch("/api/ai-agents/questions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mode,
-      classLevel,
-      studentGender,
-      count,
-      previousQuestions,
-      uniquenessSeed,
-    }),
-  });
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
 
-  const payload = (await response.json()) as {
-    questions?: unknown;
-    error?: string;
-  };
-
+async function loadQuestionsFromBank(classLevel: number, count: number): Promise<Question[]> {
+  const response = await fetch("/questions.json", { cache: "force-cache" });
   if (!response.ok) {
-    throw new Error(payload.error || `Python IQ agent failed with ${response.status}.`);
+    throw new Error(`Could not load question bank (${response.status}).`);
   }
 
-  return normalizeGeneratedQuestions(payload.questions, count, uniquenessSeed);
+  const bank = (await response.json()) as QuestionBank;
+  const pool = bank[bandForClass(classLevel)] || [];
+
+  if (pool.length === 0) {
+    throw new Error("Question bank is empty for this class level.");
+  }
+
+  return shuffle(pool)
+    .slice(0, count)
+    .map((q, index) => ({
+      id: `q${index + 1}`,
+      question: q.question,
+      options: q.options.slice(0, 4).map(String),
+      correctAnswer: Number(q.correctAnswer),
+      difficulty: q.difficulty || "medium",
+      explanation: q.explanation || "",
+      timeLimit: 60,
+    }));
 }
 
 function summarizeResults(results: TestResult[]) {
@@ -199,90 +134,39 @@ function getGameSummary(session: TestSession) {
 
 export const writtenIQAgent = {
   name: "Written IQ Test Agent",
-  model: `${IQ_MODEL} via Python`,
+  model: "Local question bank",
   async generateTest({
     classLevel,
     count = 10,
-    studentGender,
-    previousQuestions = [],
-    uniquenessSeed = `written-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   }: {
     classLevel: number;
-    questionType: QuestionType;
     count?: number;
-    studentAge?: number;
-    studentGender?: string;
-    previousQuestions?: string[];
-    uniquenessSeed?: string;
   }): Promise<Question[]> {
     try {
-      return await runPythonQuestionAgent({
-        mode: "written",
-        classLevel,
-        count,
-        studentGender,
-        previousQuestions,
-        uniquenessSeed,
-      });
+      return await loadQuestionsFromBank(classLevel, count);
     } catch (error) {
-      throw new Error(`Written IQ Test Agent could not generate AI questions. ${getErrorSummary(error)}`);
+      throw new Error(`Written IQ Test Agent could not load questions. ${getErrorSummary(error)}`);
     }
   },
 };
 
 export const voiceIQAgent = {
   name: "Voice IQ Test Agent",
-  model: `${IQ_MODEL} via Python`,
-  async generateVoiceQuestions(
-    classLevel: number,
-    count = 10,
-    studentAge?: number,
-    studentGender?: string,
-    previousQuestions: string[] = [],
-    uniquenessSeed = `voice-${Date.now()}-${Math.random().toString(36).slice(2)}`
-  ) {
-    void studentAge;
-
+  model: "Local question bank",
+  async generateVoiceQuestions(classLevel: number, count = 10) {
     try {
-      return await runPythonQuestionAgent({
-        mode: "voice",
-        classLevel,
-        count,
-        studentGender,
-        previousQuestions,
-        uniquenessSeed,
-      });
+      return await loadQuestionsFromBank(classLevel, count);
     } catch (error) {
-      throw new Error(`Voice IQ Test Agent could not generate AI questions. ${getErrorSummary(error)}`);
+      throw new Error(`Voice IQ Test Agent could not load questions. ${getErrorSummary(error)}`);
     }
   },
-  async createSpokenPrompt(question: Question, questionNumber: number) {
-    const fallback = `Question ${questionNumber}. ${question.question}. ${question.options
+  // Build the spoken script directly from the question. No LLM call here — the
+  // text goes straight to ElevenLabs TTS, so there is no OpenRouter round-trip
+  // before each audio clip.
+  createSpokenPrompt(question: Question, questionNumber: number) {
+    return `Question ${questionNumber}. ${question.question}. ${question.options
       .map((option, index) => `Option ${String.fromCharCode(65 + index)}. ${option}.`)
       .join(" ")}`;
-
-    try {
-      const content = await chatCompletion(
-        TTS_MODEL,
-        [
-          {
-            role: "system",
-            content:
-              "You are a voice-based test narration agent. Convert test content into a clear, concise spoken script. Return plain text only.",
-          },
-          {
-            role: "user",
-            content: fallback,
-          },
-        ],
-        600
-      );
-
-      return content || fallback;
-    } catch (error) {
-      console.warn("Voice IQ Test Agent fallback:", getErrorSummary(error));
-      return fallback;
-    }
   },
 };
 
@@ -323,14 +207,13 @@ export const gameIQAgent = {
 
 export const reportAgent = {
   name: "Session Report Agent",
-  model: IQ_MODEL,
+  model: "Same as question model (QUESTION_MODEL)",
   async analyzeCurrentSession(session: TestSession, classLevel: number, studentName: string) {
     const isGame = session.testType === "game";
     const summary = isGame ? getGameSummary(session) : summarizeResults(session.results);
 
     try {
       return await chatCompletion(
-        IQ_MODEL,
         [
           {
             role: "system",
@@ -385,7 +268,6 @@ Review missed question patterns, practice timed reasoning sets, and aim for stea
 
     try {
       return await chatCompletion(
-        IQ_MODEL,
         [
           {
             role: "system",
