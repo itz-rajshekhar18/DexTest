@@ -256,7 +256,7 @@ export default function SignupPage() {
                       name="name"
                       type="text"
                       required
-                      placeholder="e.g. John Doe"
+                      placeholder="e.g. Rajesh Rai"
                       value={formData.name}
                       onChange={handleInputChange}
                       onBlur={handleBlur}
@@ -284,7 +284,7 @@ export default function SignupPage() {
                       name="email"
                       type="email"
                       required
-                      placeholder="john.doe@example.com"
+                      placeholder="rajesh.rai@example.com"
                       value={formData.email}
                       onChange={handleInputChange}
                       onBlur={handleBlur}
